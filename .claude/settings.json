@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(php tmp_app\\\\artisan --version; \"---key---\"; \\(Select-String -Path tmp_app\\\\.env -Pattern '^APP_KEY=' \\).Line)"
+    ]
+  }
+}

@@ -1,0 +1,652 @@
+{
+	"info": {
+		"_postman_id": "3f6a8e2c-7b1d-4a9e-9c3a-5d2e7f8b1a44",
+		"name": "CRM API",
+		"description": "Postman collection for the CRM API (Laravel + JWT auth).\n\n## Authentication\nMost endpoints require a Bearer JWT in the `Authorization` header. Run **Authentication > Login** (or **Register**) first — its request includes a small script that automatically saves the returned `access_token` into the `{{access_token}}` collection/environment variable, which every other request reuses via the collection-level Bearer auth.\n\n## Roles\n- `admin`\n- `sales-manager`\n- `sales-executive`\n\nSome endpoints are restricted by role (see each request's description). Sales executives are additionally scoped to only their own tasks.\n\n## Variables\n| Variable | Description |\n|---|---|\n| `base_url` | API base URL, e.g. `http://localhost:8000/api` |\n| `access_token` | JWT bearer token, auto-populated by Login/Register/Refresh |\n| `lead_id` | A lead ID used by Show/Update/Delete/Assign/Status/Convert requests |\n| `customer_id` | A customer ID used by Customers/Notes requests |\n| `task_id` | A task ID used by Tasks Show/Update/Delete requests |",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{access_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [""]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [""]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "lead_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "customer_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "task_id",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Jane Doe\",\n    \"email\": \"jane.doe@example.com\",\n    \"password\": \"Password123!\",\n    \"password_confirmation\": \"Password123!\",\n    \"role\": \"sales-executive\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "register"]
+						},
+						"description": "Register a new user.\n\n**Rate limited:** 5 requests/minute.\n\n| Field | Type | Required | Notes |\n|---|---|---|---|\n| name | string | yes | max:255 |\n| email | string | yes | email, unique |\n| password | string | yes | min:8, must be confirmed |\n| password_confirmation | string | yes | must match `password` |\n| role | string | no | `sales-manager` or `sales-executive`; defaults to `sales-executive` |"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200 || pm.response.code === 201) {",
+									"    const json = pm.response.json();",
+									"    if (json.access_token) {",
+									"        pm.collectionVariables.set('access_token', json.access_token);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Login",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"jane.doe@example.com\",\n    \"password\": \"Password123!\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "login"]
+						},
+						"description": "Authenticate a user and receive a JWT access token.\n\n**Rate limited:** 5 requests/minute.\n\n| Field | Type | Required |\n|---|---|---|\n| email | string | yes |\n| password | string | yes |\n\nOn success, the `access_token` is automatically saved to the `access_token` variable for use by all other requests."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const json = pm.response.json();",
+									"    if (json.access_token) {",
+									"        pm.collectionVariables.set('access_token', json.access_token);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Refresh",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/refresh",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "refresh"]
+						},
+						"description": "Issue a new JWT using the current (possibly soon-to-expire) token. Send the current `access_token` as the Bearer token; no request body."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const json = pm.response.json();",
+									"    if (json.access_token) {",
+									"        pm.collectionVariables.set('access_token', json.access_token);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/logout",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "logout"]
+						},
+						"description": "Invalidate the current JWT. Requires Bearer token. No request body."
+					},
+					"response": []
+				},
+				{
+					"name": "Me",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/me",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "me"]
+						},
+						"description": "Get the currently authenticated user's profile. Requires Bearer token."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Leads",
+			"item": [
+				{
+					"name": "List",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/leads?search=acme&status=new&per_page=15",
+							"host": ["{{base_url}}"],
+							"path": ["leads"],
+							"query": [
+								{ "key": "search", "value": "acme", "description": "Matches first_name, last_name, email, or company" },
+								{ "key": "status", "value": "new", "description": "One of: new, contacted, qualified, proposal_sent, won, lost" },
+								{ "key": "per_page", "value": "15", "description": "Results per page (default 15)" }
+							]
+						},
+						"description": "List leads (paginated). Roles: admin, sales-manager, sales-executive.\n\n**Query params**\n| Param | Type | Notes |\n|---|---|---|\n| search | string | matches first_name, last_name, email, company |\n| status | string | new, contacted, qualified, proposal_sent, won, lost |\n| per_page | integer | default 15 |"
+					},
+					"response": []
+				},
+				{
+					"name": "Create",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Smith\",\n    \"email\": \"john.smith@acme.com\",\n    \"phone\": \"+1-555-0100\",\n    \"company\": \"Acme Corp\",\n    \"status\": \"new\",\n    \"source\": \"website\",\n    \"assigned_to\": null\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{base_url}}/leads",
+							"host": ["{{base_url}}"],
+							"path": ["leads"]
+						},
+						"description": "Create a new lead. Roles: admin, sales-manager, sales-executive.\n\n| Field | Type | Required | Notes |\n|---|---|---|---|\n| first_name | string | yes | max:255 |\n| last_name | string | yes | max:255 |\n| email | string | yes | email, max:255 |\n| phone | string | no | max:50 |\n| company | string | no | max:255 |\n| status | string | no | enum, defaults to `new` |\n| source | string | no | max:255 |\n| assigned_to | integer | no | must exist in users |"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const json = pm.response.json();",
+									"    if (json.data && json.data.id) {",
+									"        pm.collectionVariables.set('lead_id', json.data.id);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Show",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/leads/{{lead_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["leads", "{{lead_id}}"]
+						},
+						"description": "Get a single lead by ID. Roles: admin, sales-manager, sales-executive."
+					},
+					"response": []
+				},
+				{
+					"name": "Update",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"phone\": \"+1-555-0199\",\n    \"company\": \"Acme Corporation\",\n    \"source\": \"referral\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{base_url}}/leads/{{lead_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["leads", "{{lead_id}}"]
+						},
+						"description": "Partially update a lead. Roles: admin, sales-manager, sales-executive.\n\nAll fields are optional (`sometimes`) and accept the same constraints as Create: `first_name`, `last_name`, `email`, `phone`, `company`, `status`, `source`, `assigned_to`."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/leads/{{lead_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["leads", "{{lead_id}}"]
+						},
+						"description": "Delete a lead. Roles: admin, sales-manager only. Returns 204 No Content."
+					},
+					"response": []
+				},
+				{
+					"name": "Assign",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"assigned_to\": 2\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{base_url}}/leads/{{lead_id}}/assign",
+							"host": ["{{base_url}}"],
+							"path": ["leads", "{{lead_id}}", "assign"]
+						},
+						"description": "Assign (or unassign) a lead to a user. Roles: admin, sales-manager only.\n\n| Field | Type | Required | Notes |\n|---|---|---|---|\n| assigned_to | integer\\|null | yes | must exist in users; `null` unassigns |"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"qualified\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{base_url}}/leads/{{lead_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["leads", "{{lead_id}}", "status"]
+						},
+						"description": "Update a lead's status. Roles: admin, sales-manager, sales-executive.\n\n| Field | Type | Required | Notes |\n|---|---|---|---|\n| status | string | yes | one of: new, contacted, qualified, proposal_sent, won, lost |"
+					},
+					"response": []
+				},
+				{
+					"name": "Convert",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/leads/{{lead_id}}/convert",
+							"host": ["{{base_url}}"],
+							"path": ["leads", "{{lead_id}}", "convert"]
+						},
+						"description": "Convert a lead into a customer. Roles: admin, sales-manager only. No request body — copies company/contact/email/phone from the lead, sets the lead's status to `won`, and creates a customer record. Returns 422 if the lead was already converted."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const json = pm.response.json();",
+									"    if (json.data && json.data.id) {",
+									"        pm.collectionVariables.set('customer_id', json.data.id);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Customers",
+			"item": [
+				{
+					"name": "List",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/customers?per_page=15",
+							"host": ["{{base_url}}"],
+							"path": ["customers"],
+							"query": [
+								{ "key": "per_page", "value": "15", "description": "Results per page (default 15)" }
+							]
+						},
+						"description": "List customers (paginated). Roles: admin, sales-manager only."
+					},
+					"response": []
+				},
+				{
+					"name": "Show",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/customers/{{customer_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["customers", "{{customer_id}}"]
+						},
+						"description": "Get a single customer by ID, including its source lead and notes. Roles: admin, sales-manager only."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Notes",
+			"item": [
+				{
+					"name": "List Notes",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/customers/{{customer_id}}/notes",
+							"host": ["{{base_url}}"],
+							"path": ["customers", "{{customer_id}}", "notes"]
+						},
+						"description": "List all notes for a customer (latest first, not paginated). Roles: admin, sales-manager only."
+					},
+					"response": []
+				},
+				{
+					"name": "Add Note",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"note\": \"Had a great call with the client today; following up next week.\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{base_url}}/customers/{{customer_id}}/notes",
+							"host": ["{{base_url}}"],
+							"path": ["customers", "{{customer_id}}", "notes"]
+						},
+						"description": "Add a note to a customer. Roles: admin, sales-manager only. The author (`user_id`) is set automatically from the authenticated user.\n\n| Field | Type | Required |\n|---|---|---|\n| note | string | yes |"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Tasks",
+			"item": [
+				{
+					"name": "List",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/tasks?status=pending&priority=high&overdue=false&user_id=2&per_page=15",
+							"host": ["{{base_url}}"],
+							"path": ["tasks"],
+							"query": [
+								{ "key": "status", "value": "pending", "description": "pending, in_progress, completed" },
+								{ "key": "priority", "value": "high", "description": "low, medium, high" },
+								{ "key": "overdue", "value": "false", "description": "true to filter tasks past due_date and not completed" },
+								{ "key": "user_id", "value": "2", "description": "Filter by assignee" },
+								{ "key": "per_page", "value": "15", "description": "Results per page (default 15)" }
+							]
+						},
+						"description": "List tasks (paginated). Roles: admin, sales-manager, sales-executive (sales-executives only see their own tasks).\n\n**Query params**\n| Param | Type | Notes |\n|---|---|---|\n| user_id | integer | filter by assignee |\n| status | string | pending, in_progress, completed |\n| priority | string | low, medium, high |\n| overdue | boolean | due_date in the past and not completed |\n| per_page | integer | default 15 |"
+					},
+					"response": []
+				},
+				{
+					"name": "Create",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_id\": 2,\n    \"lead_id\": \"{{lead_id}}\",\n    \"customer_id\": null,\n    \"title\": \"Follow up call\",\n    \"description\": \"Discuss proposal details and next steps.\",\n    \"priority\": \"high\",\n    \"status\": \"pending\",\n    \"due_date\": \"2026-07-05\",\n    \"reminder_at\": \"2026-07-04 09:00:00\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks",
+							"host": ["{{base_url}}"],
+							"path": ["tasks"]
+						},
+						"description": "Create a new task. Roles: admin, sales-manager, sales-executive.\n\n| Field | Type | Required | Notes |\n|---|---|---|---|\n| user_id | integer | yes | must exist in users |\n| customer_id | integer | no* | must exist in customers |\n| lead_id | integer | no* | must exist in leads |\n| title | string | yes | max:255 |\n| description | string | no | |\n| priority | string | no | low, medium, high (default medium) |\n| status | string | no | pending, in_progress, completed (default pending) |\n| due_date | date | yes | |\n| reminder_at | datetime | no | |\n\n\\* At least one of `lead_id` or `customer_id` is required."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const json = pm.response.json();",
+									"    if (json.data && json.data.id) {",
+									"        pm.collectionVariables.set('task_id', json.data.id);",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "Show",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}"]
+						},
+						"description": "Get a single task by ID. Sales-executives can only view their own tasks (403 otherwise)."
+					},
+					"response": []
+				},
+				{
+					"name": "Update",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"in_progress\",\n    \"priority\": \"medium\",\n    \"due_date\": \"2026-07-10\"\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}"]
+						},
+						"description": "Partially update a task. Sales-executives can only update their own tasks (403 otherwise).\n\nAll fields are optional (`sometimes`), same constraints as Create: `user_id`, `customer_id`, `lead_id`, `title`, `description`, `priority`, `status`, `due_date`, `reminder_at`. At least one of `lead_id`/`customer_id` must remain set."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/tasks/{{task_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["tasks", "{{task_id}}"]
+						},
+						"description": "Delete a task. Sales-executives can only delete their own tasks (403 otherwise). Returns 204 No Content."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Activities",
+			"item": [
+				{
+					"name": "List",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/activities?per_page=15",
+							"host": ["{{base_url}}"],
+							"path": ["activities"],
+							"query": [
+								{ "key": "per_page", "value": "15", "description": "Results per page (default 15)" }
+							]
+						},
+						"description": "List the audit/activity log (paginated, latest first). Roles: admin, sales-manager only.\n\nKnown `action` values: `lead.created`, `lead.assigned`, `lead.status_updated`, `lead.converted`, `task.created`, `task.updated`, `task.deleted`, `customer.note_added`."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Dashboard",
+			"item": [
+				{
+					"name": "Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/dashboard",
+							"host": ["{{base_url}}"],
+							"path": ["dashboard"]
+						},
+						"description": "Get aggregate dashboard statistics. Roles: admin, sales-manager, sales-executive.\n\nResponse shape:\n```json\n{\n  \"total_leads\": 0,\n  \"total_customers\": 0,\n  \"todays_follow_ups\": 0,\n  \"overdue_tasks\": 0,\n  \"leads_by_status\": { \"new\": 0, \"contacted\": 0, \"qualified\": 0, \"proposal_sent\": 0, \"won\": 0, \"lost\": 0 },\n  \"conversion_rate\": 0.0\n}\n```"
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
