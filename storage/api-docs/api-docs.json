@@ -451,6 +451,14 @@
                 "operationId": "2b23ac696cfd81c23807c2c1fd63b0b0",
                 "parameters": [
                     {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Free-text search across customer name, company, email, or phone.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
                         "name": "per_page",
                         "in": "query",
                         "description": "Number of results per page.",
@@ -1519,6 +1527,74 @@
                 ]
             }
         },
+        "/api/search": {
+            "get": {
+                "tags": [
+                    "Search"
+                ],
+                "summary": "Global search",
+                "description": "Searches leads, customers, and tasks for a free-text query and returns the top matches grouped by type. Customers are only included for admins and sales managers.",
+                "operationId": "dd3e6c0246da94578414c41ba0bc227e",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Free-text search query.",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Grouped search results.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "leads": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Lead"
+                                            }
+                                        },
+                                        "customers": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Customer"
+                                            }
+                                        },
+                                        "tasks": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Task"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/tasks": {
             "get": {
                 "tags": [
@@ -1529,9 +1605,33 @@
                 "operationId": "471d938a3bfaeb6fbd981d7c3e2728b0",
                 "parameters": [
                     {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Free-text search across task title.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
                         "name": "user_id",
                         "in": "query",
                         "description": "Filter by assigned user ID.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "lead_id",
+                        "in": "query",
+                        "description": "Filter by related lead ID.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "customer_id",
+                        "in": "query",
+                        "description": "Filter by related customer ID.",
                         "schema": {
                             "type": "integer"
                         }
@@ -2038,6 +2138,69 @@
                     }
                 ]
             }
+        },
+        "/api/users": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "List users",
+                "description": "Returns a lightweight, searchable list of users (id and name only), used to populate assignment comboboxes.",
+                "operationId": "c457726701591d1183b53aa71fc13441",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Free-text search by user name.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "A list of users.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -2082,19 +2245,8 @@
                 "type": "object"
             },
             "AuthTokenResponse": {
+                "description": "The JWT access token is set as an HttpOnly cookie and is not present in the response body.",
                 "properties": {
-                    "access_token": {
-                        "type": "string",
-                        "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
-                    },
-                    "token_type": {
-                        "type": "string",
-                        "example": "bearer"
-                    },
-                    "expires_in": {
-                        "type": "integer",
-                        "example": 3600
-                    },
                     "user": {
                         "$ref": "#/components/schemas/AuthUser"
                     }
@@ -2628,6 +2780,14 @@
         {
             "name": "Dashboard",
             "description": "Aggregated statistics for the CRM dashboard."
+        },
+        {
+            "name": "Search",
+            "description": "Search"
+        },
+        {
+            "name": "Users",
+            "description": "Users"
         }
     ]
 }

@@ -36,6 +36,11 @@ class LeadResource extends JsonResource
                 'name' => $this->creator->name,
                 'email' => $this->creator->email,
             ]),
+            'customer' => $this->whenLoaded('customer', fn () => $this->customer ? [
+                'id' => $this->customer->id,
+                'company' => $this->customer->company,
+                'contact_name' => $this->customer->contact_name,
+            ] : null),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

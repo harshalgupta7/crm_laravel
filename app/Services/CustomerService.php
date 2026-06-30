@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Lead;
 use App\Models\Note;
 use App\Models\User;
+use App\Support\Search;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -55,10 +56,19 @@ class CustomerService
      */
     public function list(array $filters): LengthAwarePaginator
     {
-        return Customer::query()
-            ->with(['lead', 'notes'])
-            ->latest()
-            ->paginate($filters['per_page'] ?? 15);
+        $query = Customer::query()->with(['lead', 'notes']);
+
+        if ($search = $filters['search'] ?? null) {
+            $operator = Search::operator();
+            $query->where(function ($query) use ($search, $operator) {
+                $query->where('contact_name', $operator, "%{$search}%")
+                    ->orWhere('company', $operator, "%{$search}%")
+                    ->orWhere('email', $operator, "%{$search}%")
+                    ->orWhere('phone', $operator, "%{$search}%");
+            });
+        }
+
+        return $query->latest()->paginate($filters['per_page'] ?? 15);
     }
 
     /**

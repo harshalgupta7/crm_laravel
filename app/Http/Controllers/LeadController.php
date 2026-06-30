@@ -115,7 +115,7 @@ class LeadController extends Controller
      */
     public function show(Lead $lead): JsonResponse
     {
-        $lead->load(['assignedUser', 'creator']);
+        $lead->load(['assignedUser', 'creator', 'customer']);
 
         return (new LeadResource($lead))->response();
     }

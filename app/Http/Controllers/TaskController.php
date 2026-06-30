@@ -22,7 +22,10 @@ class TaskController extends Controller
         tags: ['Tasks'],
         security: [['bearerAuth' => []]],
         parameters: [
+            new OA\Parameter(name: 'search', in: 'query', description: 'Free-text search across task title.', schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'user_id', in: 'query', description: 'Filter by assigned user ID.', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'lead_id', in: 'query', description: 'Filter by related lead ID.', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'customer_id', in: 'query', description: 'Filter by related customer ID.', schema: new OA\Schema(type: 'integer')),
             new OA\Parameter(name: 'status', in: 'query', description: 'Filter by task status.', schema: new OA\Schema(type: 'string', enum: ['pending', 'in_progress', 'completed'])),
             new OA\Parameter(name: 'priority', in: 'query', description: 'Filter by task priority.', schema: new OA\Schema(type: 'string', enum: ['low', 'medium', 'high'])),
             new OA\Parameter(name: 'overdue', in: 'query', description: 'Filter to only overdue tasks.', schema: new OA\Schema(type: 'boolean')),
@@ -48,7 +51,7 @@ class TaskController extends Controller
     public function index(Request $request): JsonResponse
     {
         $tasks = $this->taskService->list(
-            $request->only(['user_id', 'status', 'priority', 'overdue', 'per_page']),
+            $request->only(['search', 'user_id', 'lead_id', 'customer_id', 'status', 'priority', 'overdue', 'per_page']),
             $request->user()
         );
 

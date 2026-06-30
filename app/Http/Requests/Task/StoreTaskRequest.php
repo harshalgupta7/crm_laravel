@@ -48,6 +48,10 @@ class StoreTaskRequest extends FormRequest
             if (! $this->filled('lead_id') && ! $this->filled('customer_id')) {
                 $validator->errors()->add('lead_id', 'A task must belong to either a lead or a customer.');
             }
+
+            if ($this->filled('lead_id') && $this->filled('customer_id')) {
+                $validator->errors()->add('lead_id', 'A task cannot belong to both a lead and a customer.');
+            }
         });
     }
 }

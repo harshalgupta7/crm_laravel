@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\LeadStatus;
 use App\Models\Lead;
 use App\Models\User;
+use App\Support\Search;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -24,11 +25,12 @@ class LeadService
         $query = Lead::query()->with(['assignedUser', 'creator']);
 
         if ($search = $filters['search'] ?? null) {
-            $query->where(function ($query) use ($search) {
-                $query->where('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('company', 'like', "%{$search}%");
+            $operator = Search::operator();
+            $query->where(function ($query) use ($search, $operator) {
+                $query->where('first_name', $operator, "%{$search}%")
+                    ->orWhere('last_name', $operator, "%{$search}%")
+                    ->orWhere('email', $operator, "%{$search}%")
+                    ->orWhere('company', $operator, "%{$search}%");
             });
         }
 

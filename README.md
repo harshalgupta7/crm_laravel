@@ -1,558 +1,374 @@
 # CRM & Lead Management System
 
-A REST API for managing sales leads, customers, notes, tasks, and team activity — built on Laravel 12 with JWT authentication, role-based access control, and full OpenAPI/Swagger documentation.
+A full-stack CRM application for managing sales leads, customers, notes, tasks, and team activity. The project consists of a **Laravel 12** backend (REST API, JWT authentication, RBAC) and a **React 19 + TypeScript** frontend (Vite, Tailwind CSS, shadcn/ui) that together provide a complete, production-style admin dashboard for a sales team.
 
 ---
 
 ## Table of Contents
 
-1. [Project Overview](#1-project-overview)
-2. [Features](#2-features)
-3. [Tech Stack](#3-tech-stack)
-4. [Architecture Overview](#4-architecture-overview)
-5. [Installation](#5-installation)
-6. [Environment Variables](#6-environment-variables)
-7. [JWT Setup](#7-jwt-setup)
-8. [Database Migration & Seeding](#8-database-migration--seeding)
-9. [Running the Project](#9-running-the-project)
-10. [Demo Accounts](#10-demo-accounts)
-11. [Authentication Flow](#11-authentication-flow)
-12. [Swagger Documentation](#12-swagger-documentation)
-13. [API Modules](#13-api-modules)
-14. [Folder Structure](#14-folder-structure)
-15. [Database Design Summary](#15-database-design-summary)
-16. [Role Matrix](#16-role-matrix)
-17. [Assumptions](#17-assumptions)
-18. [Future Improvements](#18-future-improvements)
-19. [Known Limitations](#19-known-limitations)
-20. [Deployment Notes](#20-deployment-notes)
-21. [License](#21-license)
+1. [Features](#features)
+2. [Tech Stack](#tech-stack)
+3. [Project Structure](#project-structure)
+4. [Installation](#installation)
+5. [Environment Variables](#environment-variables)
+6. [Authentication Flow](#authentication-flow)
+7. [Demo Accounts](#demo-accounts)
+8. [Frontend Pages](#frontend-pages)
+9. [Search](#search)
+10. [Lead Management](#lead-management)
+11. [Customer Management](#customer-management)
+12. [Task Management](#task-management)
+13. [Activity Timeline](#activity-timeline)
+14. [UI/UX](#uiux)
+15. [API Documentation](#api-documentation)
+16. [Database Design](#database-design)
+17. [Docker](#docker)
+18. [Screenshots](#screenshots)
+19. [Known Limitations](#known-limitations)
+20. [Future Improvements](#future-improvements)
+21. [License](#license)
 
 ---
 
-## 1. Project Overview
+## Features
 
-This system is a backend API for a small sales team to track the full lifecycle of a sale: capturing a **lead**, working it through a pipeline of statuses, converting it into a **customer**, attaching **notes** to that customer, and managing **follow-up tasks** along the way. Every meaningful action is recorded in an **activity** log, and a **dashboard** endpoint surfaces aggregated metrics (lead totals, conversion rate, overdue tasks, etc.).
+### Backend
 
-Access is governed by three roles — **Admin**, **Sales Manager**, and **Sales Executive** — each with a different level of visibility and control over leads, customers, and tasks. Authentication is stateless, using JWT bearer tokens.
+- JWT Authentication (HttpOnly Cookies)
+- Automatic Access-Token Refresh
+- Role Based Access Control (Admin, Sales Manager, Sales Executive)
+- Lead Management
+- Customer Management
+- Customer Notes
+- Task Management
+- Activity Timeline
+- Dashboard Statistics
+- Global Search (leads, customers, tasks)
+- Swagger / OpenAPI Documentation
+- Demo Data Seeding
 
-The API is fully documented with OpenAPI 3.0 (via L5-Swagger) and can be explored interactively at `/api/documentation` once the project is running.
+### Frontend
 
-## 2. Features
+- Responsive Admin Dashboard
+- Secure Cookie-Based Authentication with Automatic Token Refresh
+- Dashboard (aggregated stats and recent activity feed)
+- Leads (list, search, filter, assign, status updates, conversion)
+- Lead Detail page
+- Customers (list with linked lead and notes)
+- Customer Detail page
+- Customer Notes
+- Tasks (with user, lead, and customer autocomplete)
+- Activities (paginated audit trail)
+- Global Search (debounced, searches leads, customers, and tasks)
+- User Autocomplete
+- Lead Autocomplete
+- Customer Autocomplete
+- Loading Skeletons
+- Toast Notifications
+- Responsive UI
 
-- JWT-based registration, login, token refresh, logout, and "current user" endpoint.
-- Self-service role selection at registration (Sales Manager or Sales Executive); Admin accounts are provisioned separately.
-- Full lead lifecycle: create, list (search/filter/paginate), view, update, delete, assign to a user, and update status.
-- Lead-to-customer conversion, preserving the link back to the originating lead.
-- Customer listing/detail views with related lead and notes eagerly loaded.
-- Notes: append free-text notes to a customer, attributed to the authenticated user.
-- Tasks: create/list/view/update/delete follow-up tasks linked to a lead or a customer, with priority, status, due date, and reminder support, plus filtering by user, status, priority, and overdue state.
-- Activity log: an append-only audit trail of actions performed across the system.
-- Dashboard: aggregated stats — total leads, total customers, today's follow-ups, overdue tasks, lead breakdown by status, and conversion rate.
-- Role-based authorization enforced via middleware on every protected route.
-- Rate limiting on registration and login (5 requests/minute) to slow down brute-force attempts.
-- Complete, browsable OpenAPI 3.0 documentation generated from PHP attributes.
+---
 
-## 3. Tech Stack
+## Tech Stack
 
-| Layer            | Technology |
-|-------------------|-----------|
-| Language          | PHP 8.2+ |
-| Framework         | Laravel 12 |
-| Authentication    | JWT via `php-open-source-saver/jwt-auth` |
-| Authorization     | Custom role middleware (`App\Http\Middleware\RoleMiddleware`) |
-| API Documentation | OpenAPI 3.0 via `darkaonline/l5-swagger` (`zircote/swagger-php`, PHP attributes) |
-| Database          | SQLite by default (MySQL/PostgreSQL supported via `.env`); a PostgreSQL schema dump is provided at `database/schema.sql` |
-| Testing           | PHPUnit |
-| Code style        | Laravel Pint |
-| Frontend tooling  | Vite + Tailwind CSS (asset pipeline only — this is an API-first project) |
-| Containerization  | Docker (`Dockerfile` — PHP 8.3-CLI image with PostgreSQL extensions) |
+### Backend
 
-> `laravel/sanctum` is present in `composer.json` as part of Laravel's default scaffolding but is **not used** by this project — all API authentication is handled by JWT (see [section 7](#7-jwt-setup)).
+- Laravel 12
+- PostgreSQL
+- JWT (`php-open-source-saver/jwt-auth`)
+- L5 Swagger (OpenAPI 3.0)
 
-## 4. Architecture Overview
+### Frontend
 
-The codebase follows a layered structure on top of standard Laravel conventions, keeping HTTP concerns separate from business logic:
+- React 19
+- Vite
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- React Router
+- Axios
+- React Hook Form
+- Sonner (toast notifications)
+- Lucide React (icons)
+
+---
+
+## Project Structure
 
 ```
-HTTP Request
-   │
-   ▼
-routes/api.php          → route definitions, middleware groups (auth, role, throttle)
-   │
-   ▼
-Form Requests            → validation (App\Http\Requests\*)
-   │
-   ▼
-Controllers               → thin, orchestration-only (App\Http\Controllers\*)
-   │
-   ▼
-Services                  → business logic (App\Services\*)
-   │
-   ▼
-Models / Eloquent          → persistence (App\Models\*)
-   │
-   ▼
-API Resources              → response shaping (App\Http\Resources\*)
+.
+├── app/                  # Laravel backend (Controllers, Services, Models, Middleware, Resources)
+├── routes/                # API route definitions
+├── database/              # Migrations, seeders, schema dump, ERD docs
+├── config/                 # Laravel & CORS configuration
+├── docs/                    # ERD and Postman collections
+├── frontend/                 # React + TypeScript single-page application
+│   ├── src/
+│   │   ├── api/                # Axios instance & API request modules
+│   │   ├── components/          # Feature components (leads, customers, tasks, activities, ui, ...)
+│   │   ├── context/               # React context (auth state)
+│   │   ├── hooks/                   # Custom hooks
+│   │   ├── pages/                    # Route-level pages (Dashboard, Leads, Customers, Tasks, Activities, Login)
+│   │   ├── routes/                    # React Router configuration & protected routes
+│   │   └── types/                      # Shared TypeScript types
+│   └── package.json
+└── Dockerfile
 ```
 
-Key architectural decisions:
+**Backend (project root)** — A Laravel REST API responsible for authentication, authorization, business logic, and persistence. It issues a JWT on login and sets it as an HttpOnly cookie; all CRM data (leads, customers, notes, tasks, activities) is served through versioned `/api` endpoints.
 
-- **Controllers are thin.** They validate via Form Requests, delegate to a Service class, and shape the response via a Resource. No business rules live in controllers.
-- **Services encapsulate business logic** (`AuthService`, `LeadService`, `CustomerService`, `TaskService`, `ActivityService`, `DashboardService`), keeping it testable and reusable independent of HTTP.
-- **Stateless authentication.** JWT tokens carry identity; no server-side session is used for the API.
-- **Role middleware (`role:admin,sales-manager`)** gates routes declaratively at the routing layer, in addition to `auth:api` for authentication.
-- **API Resources** (`LeadResource`, `CustomerResource`, etc.) control exactly what is exposed in JSON responses, including conditionally-loaded relationships via `whenLoaded`.
-- **OpenAPI documentation lives alongside the code** as PHP attributes on controllers, plus a dedicated `app/OpenApi/Schemas` directory for reusable response schemas — so the spec evolves with the code instead of drifting from it.
+**`frontend/`** — A Vite-powered React SPA that consumes the Laravel API. It handles routing, protected routes, forms, and all UI rendering using Tailwind CSS and shadcn/ui components.
 
-## 5. Installation
+---
 
-### Prerequisites
+## Installation
 
-- PHP **8.2** or higher, with the typical extensions Laravel needs (`mbstring`, `openssl`, `pdo_sqlite` or `pdo_mysql`, `tokenizer`, `xml`, `ctype`, `json`, `bcmath`).
-- Composer 2.x
-- Node.js 18+ and npm (only needed if you intend to build the bundled front-end assets; not required for the API itself).
-
-### Steps
+### Backend
 
 ```bash
-# 1. Clone the repository
-git clone <repository-url>
-cd laravel_project
-
-# 2. Install PHP dependencies
 composer install
-
-# 3. Copy the environment file
-cp .env.example .env
-
-# 4. Generate the application key
+copy .env.example .env
 php artisan key:generate
-
-# 5. Create the SQLite database file (default driver — skip if using MySQL/Postgres)
-touch database/database.sqlite
-# Windows PowerShell equivalent:
-# New-Item -ItemType File -Path database/database.sqlite -Force
-
-# 6. Generate the JWT secret (see section 7 for details)
 php artisan jwt:secret
-
-# 7. Run migrations and seed demo data
 php artisan migrate --seed
-
-# 8. Generate the Swagger/OpenAPI documentation
-php artisan l5-swagger:generate
-
-# 9. Serve the application
 php artisan serve
 ```
 
-The API will be available at `http://127.0.0.1:8000/api`, and the interactive documentation at `http://127.0.0.1:8000/api/documentation`.
+The backend runs on **http://localhost:8000**.
 
-### Alternative: run with Docker
-
-A `Dockerfile` is provided (PHP 8.3-CLI with PostgreSQL extensions). It builds the app and serves it on port 8000; you still need to provide a `.env` and a database (e.g. a PostgreSQL instance) and run migrations yourself before/after starting the container:
+### Frontend
 
 ```bash
-docker build -t crm-api .
-docker run --rm -p 8000:8000 --env-file .env crm-api
+cd frontend
+npm install
+npm run dev
 ```
 
-## 6. Environment Variables
+The frontend runs on **http://localhost:3000**.
 
-Copy `.env.example` to `.env` and adjust as needed. The variables most relevant to this project:
+> Run both servers simultaneously during development — the React app at `:3000` talks to the Laravel API at `:8000`.
 
-| Variable | Description | Default |
+---
+
+## Environment Variables
+
+### Backend (`.env`)
+
+| Variable | Description |
+|---|---|
+| `APP_URL` | Base URL of the Laravel application |
+| `DB_CONNECTION` / `DB_HOST` / `DB_PORT` / `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` | PostgreSQL connection settings |
+| `JWT_SECRET` | Secret key used to sign JWTs (generate with `php artisan jwt:secret`) |
+| `JWT_TTL` / `JWT_REFRESH_TTL` | Token and refresh token lifetimes (minutes) |
+| `FRONTEND_URL` | URL of the React app, used for CORS and cookie domain configuration |
+| `L5_SWAGGER_GENERATE_ALWAYS` | Whether Swagger docs regenerate automatically |
+
+### Frontend (`frontend/.env`)
+
+```
+VITE_API_URL=http://localhost:8000
+```
+
+---
+
+## Authentication Flow
+
+Authentication is cookie-based — **no token is ever stored in `localStorage`**.
+
+```
+React Login
+     ↓
+Laravel Login API
+     ↓
+JWT issued → Stored as HttpOnly Cookie
+     ↓
+Browser sends cookie on every request automatically
+     ↓
+React checks /api/auth/me → Protected Routes render
+     ↓
+On any 401 response:
+     ↓
+Axios interceptor calls /api/auth/refresh
+     ↓
+New access-token cookie set by server
+     ↓
+Original request retried automatically
+     ↓
+If refresh fails → Logout forced
+```
+
+Because the JWT lives in an HttpOnly cookie, it is inaccessible to client-side JavaScript, which mitigates token theft via XSS. On app load (and after navigation to a protected route), the React app calls `/api/auth/me` to validate the session and hydrate the authenticated user before rendering protected content.
+
+The Axios response interceptor handles silent token refresh: when any API call returns a `401`, it calls `/api/auth/refresh` once, then replays all queued failed requests. If the refresh itself fails, the user is logged out automatically.
+
+---
+
+## Demo Accounts
+
+All demo accounts use the password: `password`
+
+| Role | Name | Email | Password |
+|---|---|---|---|
+| Admin | Alice Admin | `admin@example.com` | `password` |
+| Sales Manager | Mark Manager | `manager@example.com` | `password` |
+| Sales Executive | Eve Executive | `executive@example.com` | `password` |
+
+These accounts are created by `DemoUserSeeder` when running `php artisan migrate --seed`.
+
+---
+
+## Frontend Pages
+
+| Page | Description |
+|---|---|
+| **Dashboard** | Aggregated stats — lead totals, conversion rate, overdue tasks, follow-ups; recent activity feed |
+| **Leads** | List, search, filter, assign, and update lead status; convert to customer |
+| **Lead Detail** | Single lead view — status history, assignment, conversion, and related customer link |
+| **Customers** | Customer list with linked lead and notes |
+| **Customer Detail** | Single customer view with notes and related lead link |
+| **Tasks** | Follow-up task management with priority, status, due-date highlighting, and lead/customer association |
+| **Activities** | Paginated audit trail of actions across the system with clickable entity links |
+
+---
+
+## Search
+
+The application provides a **Global Search** bar in the top navigation, plus per-page inline search on every list view.
+
+| Search | Scope | Notes |
 |---|---|---|
-| `APP_NAME` | Application name | `Laravel` |
-| `APP_ENV` | Environment (`local`, `production`, etc.) | `local` |
-| `APP_KEY` | Laravel encryption key — set by `php artisan key:generate` | _(empty)_ |
-| `APP_DEBUG` | Show detailed error pages | `true` |
-| `APP_URL` | Base URL of the application | `http://localhost` |
-| `DB_CONNECTION` | Database driver (`sqlite`, `mysql`, `pgsql`) | `sqlite` |
-| `DB_DATABASE` | Path to the SQLite file, or DB name for other drivers | `database/database.sqlite` |
-| `DB_HOST` / `DB_PORT` / `DB_USERNAME` / `DB_PASSWORD` | Connection details when not using SQLite | — |
-| `JWT_SECRET` | Secret used to sign JWTs — set by `php artisan jwt:secret` | _(empty, required)_ |
-| `JWT_TTL` | Access token lifetime, in minutes | `60` |
-| `JWT_REFRESH_TTL` | Window during which an expired token can still be refreshed, in minutes | `20160` (2 weeks) |
-| `JWT_ALGO` | Signing algorithm | `HS256` |
-| `L5_SWAGGER_GENERATE_ALWAYS` | Regenerate the spec on every request (useful in local dev) | `false` |
-| `L5_FORMAT_TO_USE_FOR_DOCS` | `json` or `yaml` for the documentation UI | `json` |
+| **Global Search** | Leads, Customers, Tasks | Debounced (350 ms), server-side, recent-search history stored locally |
+| **Lead Search** | Leads list | Debounced, case-insensitive, server-side |
+| **Customer Search** | Customers list | Debounced, case-insensitive, server-side |
+| **Task Search** | Tasks list | Debounced, case-insensitive, server-side |
 
-> If you switch `DB_CONNECTION` to `mysql` or `pgsql`, remove/comment the SQLite-specific line in `.env` and fill in `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD`.
+---
 
-## 7. JWT Setup
+## Lead Management
 
-Authentication uses [`php-open-source-saver/jwt-auth`](https://github.com/PHP-Open-Source-Saver/jwt-auth), configured in `config/jwt.php` and `config/auth.php` (guard `api`, driver `jwt`).
+- **List view** — searchable, filterable by status, assignable in bulk
+- **Lead Detail page** — full lead profile, current status, assigned user, related customer (after conversion)
+- **Status changes** — controlled workflow (e.g. New → Contacted → Qualified → …)
+- **Assignment** — admin/manager can assign leads to any sales executive
+- **Conversion** — leads can be converted to customers; the detail page links to the resulting customer record
 
-1. **Generate the signing secret** (writes `JWT_SECRET` into `.env` automatically):
-   ```bash
-   php artisan jwt:secret
-   ```
-2. **Tune the token lifetimes** if needed, via `.env`:
-   ```env
-   JWT_TTL=60            # access token lifetime, in minutes
-   JWT_REFRESH_TTL=20160 # refresh window, in minutes
-   ```
-3. **How tokens are issued and consumed:**
-   - `POST /api/auth/register` and `POST /api/auth/login` return an `access_token` (type `bearer`) and its `expires_in` (seconds).
-   - Send the token on every subsequent request as:
-     ```
-     Authorization: Bearer <access_token>
-     ```
-   - `POST /api/auth/refresh` exchanges a still-refreshable token (even if expired, within `JWT_REFRESH_TTL`) for a brand-new one.
-   - `POST /api/auth/logout` blacklists the current token so it can no longer be used.
+---
 
-No additional setup is required beyond running `php artisan jwt:secret` once.
+## Customer Management
 
-## 8. Database Migration & Seeding
+- **List view** — searchable, shows company / contact name and linked lead
+- **Customer Detail page** — full customer profile with linked lead reference
+- **Notes** — freeform notes can be added and viewed per customer
+- Customers are created exclusively via lead conversion (no standalone customer creation)
 
-Run migrations and seeders together:
+---
+
+## Task Management
+
+- **User autocomplete** — search and select any user as the task assignee
+- **Lead / Customer association** — each task is linked to either a lead or a customer (toggle in the form)
+- **Lead autocomplete** / **Customer autocomplete** — type-ahead search when linking a task
+- **Due-date highlighting** — overdue tasks (past due date, not completed) are flagged with a destructive warning icon
+- **Ownership restrictions** — role-based visibility; executives see only their own tasks
+
+---
+
+## Activity Timeline
+
+- Every significant action (lead created, assigned, status changed, converted; task created/updated/deleted; customer note added) is recorded automatically
+- Each row shows a **coloured icon** representing the action type, the acting user's name, a description with a **clickable link** to the affected entity, and a **relative timestamp** (e.g. "3 hours ago") with the exact time on hover
+- The timeline is paginated and available both on the Activities page and as a recent-activity widget on the Dashboard
+
+---
+
+## UI/UX
+
+- Modern SaaS-inspired design built with Tailwind CSS and shadcn/ui
+- **Floating sidebar** with avatar, role display, and logout — collapsible nav groups for main and workspace items (Calendar and Pipeline shown as UI placeholders)
+- **Dashboard cards** — stat tiles with trend indicators and a recent activity feed
+- **Responsive layout** — works across desktop and tablet breakpoints
+- **Skeleton loading** — every table and list shows content-shaped skeletons while data is fetched
+- **Empty states** — friendly empty-state illustrations and calls-to-action when a list has no data
+- **Global search** in the top navbar with dropdown results and recent-search history
+- **Sticky table headers** — column headers remain visible while scrolling long lists
+- **Premium dialogs** — all create/edit/delete/assign/convert actions use polished modal dialogs with server-side validation feedback
+
+---
+
+## API Documentation
+
+Interactive OpenAPI 3.0 documentation is generated by L5-Swagger and available at:
+
+```
+http://localhost:8000/api/documentation
+```
+
+---
+
+## Database Design
+
+An entity-relationship diagram and schema notes are documented in [`docs/ERD.md`](docs/ERD.md). A ready-made PostgreSQL schema dump is also available at `database/schema.sql` for quickly inspecting or restoring the schema.
+
+---
+
+## Docker
+
+Build and run the backend in a container:
 
 ```bash
-php artisan migrate --seed
+docker build -t crm-backend .
+docker run -p 8000:8000 --env-file .env crm-backend
 ```
 
-Or separately:
+The frontend is not currently containerized — run it locally with `npm run dev` (or `npm run build` and serve the static output separately) while pointing `VITE_API_URL` at the containerized backend.
 
-```bash
-php artisan migrate     # create all tables
-php artisan db:seed     # populate roles and demo users
-```
+---
 
-To start completely fresh (drops all tables first):
+## Screenshots
 
-```bash
-php artisan migrate:fresh --seed
-```
+> Screenshots will be added here. Place image files under `docs/screenshots/` and reference them below.
 
-Seeding runs two seeders, in order:
+| Login | Dashboard |
+|---|---|
+| _(placeholder)_ | _(placeholder)_ |
 
-1. **`RoleSeeder`** — creates the three roles: `admin`, `sales-manager`, `sales-executive`.
-2. **`DemoUserSeeder`** — creates one ready-to-use account per role (see [Demo Accounts](#10-demo-accounts) below).
-
-### Alternative: load the SQL dump directly
-
-A ready-made PostgreSQL schema dump (all tables, indexes, constraints, foreign keys, plus the same seeded roles/demo users) is provided at `database/schema.sql`. This is an alternative to running `migrate --seed` — useful for quickly inspecting the schema or restoring it into a fresh PostgreSQL database:
-
-```bash
-psql "<connection-string>" -f database/schema.sql
-```
+| Leads | Lead Detail |
+|---|---|
+| _(placeholder)_ | _(placeholder)_ |
 
-## 9. Running the Project
+| Customers | Customer Detail |
+|---|---|
+| _(placeholder)_ | _(placeholder)_ |
 
-Start the built-in PHP server:
+| Tasks | Activities |
+|---|---|
+| _(placeholder)_ | _(placeholder)_ |
 
-```bash
-php artisan serve
-```
+---
 
-By default this serves the app at `http://127.0.0.1:8000`. The API itself is rooted at `/api` (e.g. `http://127.0.0.1:8000/api/leads`).
+## Known Limitations
 
-Optional, if you want the queue worker, log viewer, and Vite dev server running alongside the app (mainly useful if you touch the bundled front-end scaffolding — not required to exercise the API):
+- **User Management** — creating, editing, or deactivating user accounts via the UI is intentionally out of scope; accounts are managed via seeders or directly in the database.
+- **Calendar** — the Calendar nav item in the sidebar is a UI placeholder with no backing implementation.
+- **Pipeline** — the Pipeline nav item is similarly a placeholder.
+- **No email integrations** — no outbound email (reminders, notifications, lead assignment alerts).
+- **No real-time notifications** — all data requires a manual page refresh or re-navigation to reflect changes made by other users.
+- **No file attachments** — notes and leads do not support document or image uploads.
 
-```bash
-composer run dev
-```
+---
 
-Run the automated test suite at any time with:
+## Future Improvements
 
-```bash
-php artisan test
-```
+- Real-time notifications (WebSockets / broadcasting)
+- File uploads for leads, customers, and notes
+- Email reminders and assignment alerts
+- Advanced analytics and reporting charts
+- User Management (admin UI for creating and managing accounts and roles)
+- Calendar integration
+- Kanban pipeline view
 
-## 10. Demo Accounts
+---
 
-The `DemoUserSeeder` provisions one account per role so you can log in immediately after seeding. All accounts share the password `password`.
+## License
 
-| Role | Email | Password |
-|---|---|---|
-| **Admin** | `admin@example.com` | `password` |
-| **Sales Manager** | `manager@example.com` | `password` |
-| **Sales Executive** | `executive@example.com` | `password` |
-
-Log in via `POST /api/auth/login` with any of the credentials above to obtain a JWT, then use that token to exercise the rest of the API (see [Authentication Flow](#11-authentication-flow)).
-
-## 11. Authentication Flow
-
-1. **Register** (optional — demo accounts already exist):
-   ```http
-   POST /api/auth/register
-   Content-Type: application/json
-
-   {
-     "name": "Jane Doe",
-     "email": "jane.doe@example.com",
-     "password": "secret123",
-     "password_confirmation": "secret123",
-     "role": "sales-executive"
-   }
-   ```
-   `role` is optional and limited to `sales-manager` or `sales-executive` — it defaults to `sales-executive` if omitted. Admin accounts cannot be self-registered; they must be seeded or created by another admin.
-
-2. **Login:**
-   ```http
-   POST /api/auth/login
-   Content-Type: application/json
-
-   {
-     "email": "admin@example.com",
-     "password": "password"
-   }
-   ```
-   Response:
-   ```json
-   {
-     "access_token": "eyJ...",
-     "token_type": "bearer",
-     "expires_in": 3600,
-     "user": { "id": 1, "name": "Alice Admin", "email": "admin@example.com", "role": { "...": "..." } }
-   }
-   ```
-
-3. **Authenticate subsequent requests** by sending the token in the `Authorization` header:
-   ```
-   Authorization: Bearer eyJ...
-   ```
-
-4. **Get the current user:**
-   ```http
-   GET /api/auth/me
-   Authorization: Bearer eyJ...
-   ```
-
-5. **Refresh the token** before/after it expires (within the refresh window):
-   ```http
-   POST /api/auth/refresh
-   Authorization: Bearer eyJ...
-   ```
-
-6. **Logout** (blacklists the token):
-   ```http
-   POST /api/auth/logout
-   Authorization: Bearer eyJ...
-   ```
-
-All endpoints other than `register`, `login`, and `refresh` require a valid bearer token; routes are additionally gated by role (see [Role Matrix](#16-role-matrix)).
-
-## 12. Swagger Documentation
-
-The full API is documented with OpenAPI 3.0 using PHP attributes (`zircote/swagger-php`) rendered through `darkaonline/l5-swagger`.
-
-- **Interactive UI:** `http://127.0.0.1:8000/api/documentation`
-- **Raw spec (JSON):** `http://127.0.0.1:8000/docs`
-
-To regenerate the spec after changing any controller annotations:
-
-```bash
-php artisan l5-swagger:generate
-```
-
-To authenticate inside the Swagger UI, click **Authorize**, paste a bearer token obtained from `/api/auth/login`, and all "try it out" requests will include it automatically.
-
-Documentation source lives in:
-- `app/Http/Controllers/Controller.php` — global `Info` block, the `bearerAuth` security scheme, and tag definitions.
-- Each controller — per-endpoint `summary`, `description`, `parameters`, `requestBody`, and `responses`.
-- `app/OpenApi/Schemas/*.php` — reusable response schema definitions (`Lead`, `Customer`, `Note`, `Task`, `Activity`, etc.).
-
-### Postman collection
-
-A ready-to-import Postman collection and environment are provided under `docs/postman/`:
-
-- **Collection:** `docs/postman/CRM_API.postman_collection.json`
-- **Environment:** `docs/postman/CRM_API.postman_environment.json` (defines `base_url` and a `token` variable — populate `token` from the login response, or use the collection's auth tests to set it automatically)
-
-Import both files into Postman, select the `CRM_API` environment, and run the **Auth → Login** request first to obtain a token for the rest of the collection.
-
-### ER diagram
-
-An entity-relationship diagram (Mermaid format) describing all tables and relationships is provided at `docs/ERD.md`. It renders natively on GitHub, or can be viewed in any Mermaid-compatible viewer/editor.
-
-## 13. API Modules
-
-All routes are prefixed with `/api`. 🔒 indicates a route requires a valid JWT; roles listed are the only roles permitted.
-
-### Authentication (`/api/auth`)
-
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| POST | `/auth/register` | Register a new user | Public (rate-limited 5/min) |
-| POST | `/auth/login` | Authenticate and receive a token | Public (rate-limited 5/min) |
-| POST | `/auth/refresh` | Exchange a token for a new one | Bearer token |
-| POST | `/auth/logout` | Invalidate the current token | 🔒 Any authenticated user |
-| GET | `/auth/me` | Get the authenticated user | 🔒 Any authenticated user |
-
-### Leads (`/api/leads`)
-
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| GET | `/leads` | List leads (search, filter by status, paginate) | 🔒 Admin, Sales Manager, Sales Executive |
-| POST | `/leads` | Create a lead | 🔒 Admin, Sales Manager, Sales Executive |
-| GET | `/leads/{lead}` | View a lead | 🔒 Admin, Sales Manager, Sales Executive |
-| PUT/PATCH | `/leads/{lead}` | Update a lead | 🔒 Admin, Sales Manager, Sales Executive |
-| DELETE | `/leads/{lead}` | Delete a lead | 🔒 Admin, Sales Manager |
-| PATCH | `/leads/{lead}/assign` | Assign/unassign a lead to a user | 🔒 Admin, Sales Manager |
-| PATCH | `/leads/{lead}/status` | Update a lead's status | 🔒 Admin, Sales Manager, Sales Executive |
-| POST | `/leads/{lead}/convert` | Convert a lead into a customer | 🔒 Admin, Sales Manager |
-
-### Customers (`/api/customers`)
-
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| GET | `/customers` | List customers | 🔒 Admin, Sales Manager |
-| GET | `/customers/{customer}` | View a customer (with lead + notes) | 🔒 Admin, Sales Manager |
-
-### Notes (`/api/customers/{customer}/notes`)
-
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| GET | `/customers/{customer}/notes` | List notes for a customer | 🔒 Admin, Sales Manager |
-| POST | `/customers/{customer}/notes` | Add a note to a customer | 🔒 Admin, Sales Manager |
-
-### Tasks (`/api/tasks`)
-
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| GET | `/tasks` | List tasks (filter by user, status, priority, overdue) | 🔒 Admin, Sales Manager, Sales Executive |
-| POST | `/tasks` | Create a task (must link to a lead or a customer) | 🔒 Admin, Sales Manager, Sales Executive |
-| GET | `/tasks/{task}` | View a task | 🔒 Admin, Sales Manager, Sales Executive |
-| PUT/PATCH | `/tasks/{task}` | Update a task | 🔒 Admin, Sales Manager, Sales Executive |
-| DELETE | `/tasks/{task}` | Delete a task | 🔒 Admin, Sales Manager, Sales Executive |
-
-### Activities (`/api/activities`)
-
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| GET | `/activities` | Paginated audit log, latest first | 🔒 Admin, Sales Manager |
-
-### Dashboard (`/api/dashboard`)
-
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| GET | `/dashboard` | Aggregated stats (totals, conversion rate, overdue tasks, leads by status) | 🔒 Admin, Sales Manager, Sales Executive |
-
-Full request/response schemas, parameters, and error codes for every endpoint are available in the [Swagger UI](#12-swagger-documentation).
-
-## 14. Folder Structure
-
-```
-laravel_project/
-├── app/
-│   ├── Enums/                  # LeadStatus, TaskPriority, TaskStatus
-│   ├── Http/
-│   │   ├── Controllers/        # Thin controllers (Auth, Lead, Customer, Note, Task, Activity, Dashboard)
-│   │   ├── Middleware/         # RoleMiddleware (role-based access control)
-│   │   ├── Requests/           # Form Request validation, grouped by domain (Auth, Lead, Customer, Task)
-│   │   └── Resources/          # JSON response shaping (AuthResource, LeadResource, etc.)
-│   ├── Models/                 # Eloquent models (User, Role, Lead, Customer, Note, Task, Activity)
-│   ├── OpenApi/
-│   │   └── Schemas/            # Reusable OpenAPI component schemas (Lead, Customer, Task, etc.)
-│   ├── Providers/              # Service container bindings
-│   └── Services/               # Business logic (AuthService, LeadService, CustomerService, TaskService, ActivityService, DashboardService)
-├── config/                     # Laravel + jwt-auth + l5-swagger configuration
-├── database/
-│   ├── factories/              # Model factories used in tests/seeding
-│   ├── migrations/             # Schema definitions for every table
-│   ├── seeders/                # RoleSeeder, DemoUserSeeder
-│   └── schema.sql              # PostgreSQL schema dump (alternative to migrate --seed)
-├── docs/
-│   ├── ERD.md                  # Entity-relationship diagram (Mermaid)
-│   └── postman/                # Postman collection + environment
-├── routes/
-│   ├── api.php                 # All API routes, grouped by auth/role middleware
-│   ├── console.php
-│   └── web.php
-├── storage/api-docs/           # Generated OpenAPI spec (api-docs.json)
-├── tests/
-│   ├── Feature/
-│   └── Unit/
-├── .env.example
-├── Dockerfile
-├── composer.json
-└── README.md
-```
-
-## 15. Database Design Summary
-
-| Table | Purpose | Key relationships |
-|---|---|---|
-| `roles` | The three system roles (`admin`, `sales-manager`, `sales-executive`) | `users.role_id → roles.id` |
-| `users` | Application users / sales team members | belongs to `roles`; has many `leads` (as creator/assignee), `tasks`, `notes`, `activities` |
-| `leads` | Prospective customers, tracked through a status pipeline | `assigned_to → users.id` (nullable), `created_by → users.id`; has one `customer` |
-| `customers` | Leads that have been converted into paying/active accounts | `lead_id → leads.id` (unique — one customer per lead); has many `notes` |
-| `notes` | Free-text notes logged against a customer | `customer_id → customers.id`, `user_id → users.id` |
-| `tasks` | Follow-up tasks linked to a lead and/or a customer | `user_id → users.id`, `customer_id → customers.id` (nullable), `lead_id → leads.id` (nullable) |
-| `activities` | Append-only audit log of actions taken in the system | `user_id → users.id`; polymorphic-style `subject_type` + `subject_id` (no `updated_at`) |
-
-**Notes on design:**
-- `leads.status` is a string column backed by the `LeadStatus` enum (`new`, `contacted`, `qualified`, `proposal_sent`, `won`, `lost`).
-- `tasks.priority` / `tasks.status` are string columns backed by the `TaskPriority` (`low`, `medium`, `high`) and `TaskStatus` (`pending`, `in_progress`, `completed`) enums.
-- A `customers.lead_id` unique constraint enforces a strict 1:1 relationship between a lead and the customer it became.
-- A task must reference at least a `lead_id` or a `customer_id` — enforced at the validation layer (`StoreTaskRequest` / `UpdateTaskRequest`), not the database, to keep both fields independently nullable.
-- `activities` has no `updated_at` column by design — it is an immutable log.
-
-## 16. Role Matrix
-
-| Capability | Admin | Sales Manager | Sales Executive |
-|---|:---:|:---:|:---:|
-| Register / Login / Logout / Me | ✅ | ✅ | ✅ |
-| List / view / create / update leads | ✅ | ✅ | ✅ |
-| Delete a lead | ✅ | ✅ | ❌ |
-| Assign a lead to a user | ✅ | ✅ | ❌ |
-| Update lead status | ✅ | ✅ | ✅ |
-| Convert a lead into a customer | ✅ | ✅ | ❌ |
-| List / view customers | ✅ | ✅ | ❌ |
-| List / add notes on a customer | ✅ | ✅ | ❌ |
-| List / view / create / update / delete tasks | ✅ | ✅ | ✅ |
-| View the dashboard | ✅ | ✅ | ✅ |
-| List activities (audit log) | ✅ | ✅ | ❌ |
-
-> Authorization is enforced server-side via the `role:` middleware on each route group (see `routes/api.php`); the table above reflects what is actually permitted, not just UI-level hints.
-
-## 17. Assumptions
-
-- A single "admin" tier was assumed sufficient — there is no further distinction between, e.g., "super admin" vs. "admin".
-- Self-registration is intentionally restricted to Sales Manager and Sales Executive; provisioning an Admin account is treated as an operational/seeding concern rather than a public API capability.
-- A lead can be converted at most once — there is no unconvert/undo flow, and `customers.lead_id` is unique to enforce this at the database level.
-- "Overdue" tasks are defined as tasks with a `due_date` in the past and a `status` other than `completed`.
-- Pagination defaults to 15 items per page across all paginated list endpoints, overridable via `per_page`.
-- SQLite is used as the default datastore for ease of evaluation; the schema and queries are written to be portable to MySQL/PostgreSQL without modification.
-- The activity log is populated by application code at the point actions occur; there is no database-trigger-based auditing.
-- JWT is used instead of session/cookie auth since this is a pure JSON API intended to be consumed by external/SPA/mobile clients.
-
-## 18. Future Improvements
-
-- Add granular, per-record ownership checks (e.g., a Sales Executive only managing tasks/leads assigned to them) rather than role-only gating.
-- Add soft deletes for leads, customers, and tasks to support recovery and more complete audit trails.
-- Add email notifications/reminders for upcoming task due dates.
-- Add bulk operations (bulk lead import, bulk assignment).
-- Add API versioning (`/api/v1/...`) ahead of any breaking changes.
-- Add rate limiting more broadly across write endpoints, not just auth.
-- Add automated factories/seeders for sample leads, customers, notes, and tasks to make manual exploration of the dashboard and listing endpoints richer out of the box.
-- Expand automated test coverage (currently limited to the framework's default smoke tests) with feature tests per module and role.
-- Consider OAuth2/social login as an alternative to password-based auth.
-
-## 19. Known Limitations
-
-- Authorization is role-only — there are no per-record ownership checks, so e.g. any Sales Executive can act on tasks/leads not assigned to them as long as their role permits the action.
-- No soft deletes: deleting a lead or task is permanent (no recovery/undo).
-- The activity log is written by application code at the point an action occurs; it is not a database-level (trigger-based) audit trail, so any change made outside the API layer (e.g. a direct DB edit) won't be recorded.
-- No automated factories/seeders for sample leads, customers, notes, or tasks — only roles and demo users are seeded, so listing/dashboard endpoints will look sparse until data is created manually.
-- Automated test coverage is currently limited to the framework's default smoke tests (`tests/Feature/ExampleTest.php`, `tests/Unit/ExampleTest.php`); no feature tests exist yet per module/role.
-- No API versioning (`/api/v1/...`) — all routes are unversioned under `/api`.
-- Rate limiting is applied only to `register`/`login`; other write endpoints are not throttled.
-- SQLite is the default local datastore; while the schema is written to be portable, it has not been tested end-to-end against MySQL.
-
-## 20. Deployment Notes
-
-This project ships as a plain Laravel API with no environment-specific deployment pipeline configured (no CI/CD, no cloud-provider config). For deploying beyond local development:
-
-- **Docker:** the provided `Dockerfile` builds a self-contained PHP 8.3-CLI image (with PostgreSQL extensions) that serves the app via `php artisan serve` on port 8000. It is suitable for quick container-based testing; for production, front it with a real web server (Nginx + PHP-FPM) rather than the built-in dev server.
-- **Database:** point `DB_CONNECTION`/`DB_HOST`/`DB_PORT`/`DB_DATABASE`/`DB_USERNAME`/`DB_PASSWORD` at a managed PostgreSQL/MySQL instance, then run `php artisan migrate --seed` (or load `database/schema.sql` for PostgreSQL) against it.
-- **Required runtime config:** `APP_KEY` (`php artisan key:generate`) and `JWT_SECRET` (`php artisan jwt:secret`) must be generated per environment — never reuse the values from local `.env`.
-- **Swagger spec:** run `php artisan l5-swagger:generate` as part of the deploy step (or set `L5_SWAGGER_GENERATE_ALWAYS=true` to regenerate on every request — not recommended for production due to the performance cost).
-- No queue worker, scheduler, or background job is required for the current feature set; `QUEUE_CONNECTION=database` is configured but not actively used by any feature.
-
-## 21. License
-
-This project is open-sourced under the [MIT license](https://opensource.org/licenses/MIT).
+MIT

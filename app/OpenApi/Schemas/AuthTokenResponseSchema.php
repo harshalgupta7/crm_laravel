@@ -6,10 +6,8 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     schema: 'AuthTokenResponse',
+    description: 'The JWT access token is set as an HttpOnly cookie and is not present in the response body.',
     properties: [
-        new OA\Property(property: 'access_token', type: 'string', example: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...'),
-        new OA\Property(property: 'token_type', type: 'string', example: 'bearer'),
-        new OA\Property(property: 'expires_in', type: 'integer', example: 3600),
         new OA\Property(property: 'user', ref: '#/components/schemas/AuthUser'),
     ],
 )]

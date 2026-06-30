@@ -8,7 +8,9 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\AuthResource;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cookie;
 use OpenApi\Attributes as OA;
+use Symfony\Component\HttpFoundation\Cookie as CookieDefinition;
 
 class AuthController extends Controller
 {
@@ -126,7 +128,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Successfully logged out.',
-        ]);
+        ])->withCookie($this->forgetTokenCookie());
     }
 
     #[OA\Get(
@@ -157,17 +159,42 @@ class AuthController extends Controller
     }
 
     /**
-     * Build the standard access-token JSON response.
+     * Build the standard authenticated-user JSON response and attach the
+     * JWT as an HttpOnly cookie. The token itself is never exposed in the
+     * response body.
      *
      * @param  array<string, mixed>  $payload
      */
     private function tokenResponse(array $payload): JsonResponse
     {
         return response()->json([
-            'access_token' => $payload['access_token'],
-            'token_type' => $payload['token_type'],
-            'expires_in' => $payload['expires_in'],
             'user' => new AuthResource($payload['user']),
-        ]);
+        ])->withCookie($this->makeTokenCookie($payload['access_token'], $payload['expires_in']));
+    }
+
+    /**
+     * Build the HttpOnly cookie carrying the JWT.
+     */
+    private function makeTokenCookie(string $token, int $expiresInSeconds): CookieDefinition
+    {
+        return Cookie::make(
+            name: config('jwt.cookie_key_name'),
+            value: $token,
+            minutes: (int) ceil($expiresInSeconds / 60),
+            path: '/',
+            domain: null,
+            secure: app()->environment('production'),
+            httpOnly: true,
+            raw: false,
+            sameSite: 'lax',
+        );
+    }
+
+    /**
+     * Build an expired cookie that clears the JWT cookie on the client.
+     */
+    private function forgetTokenCookie(): CookieDefinition
+    {
+        return Cookie::forget(config('jwt.cookie_key_name'));
     }
 }

@@ -50,6 +50,7 @@ class CustomerController extends Controller
         tags: ['Customers'],
         security: [['bearerAuth' => []]],
         parameters: [
+            new OA\Parameter(name: 'search', in: 'query', description: 'Free-text search across customer name, company, email, or phone.', schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'per_page', in: 'query', description: 'Number of results per page.', schema: new OA\Schema(type: 'integer', default: 15)),
         ],
         responses: [
@@ -71,7 +72,7 @@ class CustomerController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $customers = $this->customerService->list($request->only(['per_page']));
+        $customers = $this->customerService->list($request->only(['search', 'per_page']));
 
         return CustomerResource::collection($customers)->response();
     }

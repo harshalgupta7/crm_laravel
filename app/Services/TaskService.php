@@ -6,6 +6,7 @@ use App\Enums\TaskStatus;
 use App\Models\Role;
 use App\Models\Task;
 use App\Models\User;
+use App\Support\Search;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
@@ -31,8 +32,20 @@ class TaskService
             $query->where('user_id', $actor->id);
         }
 
+        if ($search = $filters['search'] ?? null) {
+            $query->where('title', Search::operator(), "%{$search}%");
+        }
+
         if ($userId = $filters['user_id'] ?? null) {
             $query->where('user_id', $userId);
+        }
+
+        if ($leadId = $filters['lead_id'] ?? null) {
+            $query->where('lead_id', $leadId);
+        }
+
+        if ($customerId = $filters['customer_id'] ?? null) {
+            $query->where('customer_id', $customerId);
         }
 
         if ($status = $filters['status'] ?? null) {
