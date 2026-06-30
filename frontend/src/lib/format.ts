@@ -45,3 +45,58 @@ export function formatRelativeTime(dateString: string | null): string {
 
   return ''
 }
+
+const exactTimestampFormatter = new Intl.DateTimeFormat('en', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+})
+
+export function formatExactTimestamp(dateString: string | null): string {
+  if (!dateString) return ''
+  return exactTimestampFormatter.format(new Date(dateString))
+}
+
+const exactDateFormatter = new Intl.DateTimeFormat('en', { dateStyle: 'medium' })
+
+/** Same as formatExactTimestamp but omits the time, for date-only fields like due_date. */
+export function formatExactDate(dateString: string | null): string {
+  if (!dateString) return ''
+  return exactDateFormatter.format(new Date(dateString))
+}
+
+const shortDateFormatter = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' })
+
+function startOfDay(date: Date): Date {
+  const copy = new Date(date)
+  copy.setHours(0, 0, 0, 0)
+  return copy
+}
+
+function daysBetween(from: Date, to: Date): number {
+  const msPerDay = 24 * 60 * 60 * 1000
+  return Math.round((startOfDay(to).getTime() - startOfDay(from).getTime()) / msPerDay)
+}
+
+/**
+ * Formats a due date relative to today: "Today"/"Tomorrow"/"Yesterday" for
+ * adjacent days, "In N days"/"N days overdue" within a week, and a short
+ * date like "Jul 8" beyond that.
+ */
+export function formatDueDate(dateString: string | null): string {
+  if (!dateString) return ''
+
+  const diff = daysBetween(new Date(), new Date(dateString))
+
+  if (diff === 0) return 'Today'
+  if (diff === 1) return 'Tomorrow'
+  if (diff === -1) return 'Yesterday'
+  if (diff > 1 && diff <= 7) return `In ${diff} days`
+  if (diff < -1 && diff >= -7) return `${Math.abs(diff)} days overdue`
+
+  return shortDateFormatter.format(new Date(dateString))
+}
+
+export function isOverdueDate(dateString: string | null): boolean {
+  if (!dateString) return false
+  return daysBetween(new Date(), new Date(dateString)) < 0
+}

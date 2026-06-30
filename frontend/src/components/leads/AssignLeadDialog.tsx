@@ -12,15 +12,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { UserCombobox } from '@/components/ui/user-combobox'
 import { assignLead } from '@/api/leads'
 import { applyServerValidationErrors, getApiErrorMessage } from '@/lib/api-error'
 import type { Lead } from '@/types/lead'
-
-const UNASSIGNED_VALUE = 'unassigned'
+import type { UserSummary } from '@/types/user'
 
 interface AssignFormValues {
-  assigned_to: string
+  assigned_to: UserSummary | null
 }
 
 interface AssignLeadDialogProps {
@@ -37,11 +36,11 @@ export function AssignLeadDialog({ lead, open, onOpenChange, onSuccess }: Assign
     reset,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<AssignFormValues>({ defaultValues: { assigned_to: UNASSIGNED_VALUE } })
+  } = useForm<AssignFormValues>({ defaultValues: { assigned_to: null } })
 
   useEffect(() => {
     if (open) {
-      reset({ assigned_to: lead?.assigned_user ? String(lead.assigned_user.id) : UNASSIGNED_VALUE })
+      reset({ assigned_to: lead?.assigned_user ? { id: lead.assigned_user.id, name: lead.assigned_user.name } : null })
     }
   }, [open, lead, reset])
 
@@ -49,8 +48,7 @@ export function AssignLeadDialog({ lead, open, onOpenChange, onSuccess }: Assign
     if (!lead) return
 
     try {
-      const assignedTo = values.assigned_to === UNASSIGNED_VALUE ? null : Number(values.assigned_to)
-      await assignLead(lead.id, assignedTo)
+      await assignLead(lead.id, values.assigned_to ? values.assigned_to.id : null)
       toast.success('Lead assignment updated.')
       onOpenChange(false)
       onSuccess()
@@ -80,24 +78,16 @@ export function AssignLeadDialog({ lead, open, onOpenChange, onSuccess }: Assign
               name="assigned_to"
               control={control}
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger className="w-full" aria-invalid={!!errors.assigned_to}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
-                    {lead?.assigned_user && (
-                      <SelectItem value={String(lead.assigned_user.id)}>{lead.assigned_user.name}</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                <UserCombobox
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Search users by name..."
+                  unassignedLabel="Unassigned"
+                  invalid={!!errors.assigned_to}
+                />
               )}
             />
             {errors.assigned_to && <p className="text-sm text-destructive">{errors.assigned_to.message}</p>}
-            <p className="text-xs text-muted-foreground">
-              No user directory endpoint is available yet, so only the currently assigned user and unassigning
-              are supported here.
-            </p>
           </div>
 
           <DialogFooter className="mt-4">

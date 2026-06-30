@@ -23,6 +23,10 @@ export function fetchLeads(params: LeadListParams) {
   return apiClient.get<PaginatedResponse<Lead>>('/api/leads', { params })
 }
 
+export function fetchLead(id: number) {
+  return apiClient.get<{ data: Lead }>(`/api/leads/${id}`)
+}
+
 export function createLead(payload: LeadPayload) {
   return apiClient.post<{ data: Lead }>('/api/leads', payload)
 }

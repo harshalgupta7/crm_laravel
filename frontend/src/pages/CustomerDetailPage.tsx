@@ -11,6 +11,70 @@ import { useCustomer } from '@/hooks/useCustomer'
 import { useNotes } from '@/hooks/useNotes'
 import type { LeadStatus } from '@/types/lead'
 
+function CustomerDetailSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Skeleton className="size-10 shrink-0 rounded-lg" />
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-4 w-56" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="flex justify-between gap-4">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-4 w-56" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="flex justify-between gap-4">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="flex-row items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-7 w-24" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="space-y-2">
+              <Skeleton className="h-4 w-1/3" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 export function CustomerDetailPage() {
   const params = useParams<{ id: string }>()
   const customerId = Number(params.id)
@@ -31,10 +95,7 @@ export function CustomerDetailPage() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-4">
-          <Skeleton className="h-7 w-64" />
-          <Skeleton className="h-40 w-full" />
-        </div>
+        <CustomerDetailSkeleton />
       ) : error ? (
         <p className="rounded-xl border border-border py-10 text-center text-sm text-destructive">{error}</p>
       ) : !customer ? (
@@ -85,9 +146,12 @@ export function CustomerDetailPage() {
                   <>
                     <div className="flex justify-between gap-4">
                       <span className="text-muted-foreground">Name</span>
-                      <span className="text-foreground">
+                      <Link
+                        to={`/leads/${customer.lead.id}`}
+                        className="text-foreground underline-offset-2 hover:underline"
+                      >
                         {customer.lead.first_name} {customer.lead.last_name}
-                      </span>
+                      </Link>
                     </div>
                     <div className="flex justify-between gap-4">
                       <span className="text-muted-foreground">Status</span>
@@ -119,7 +183,12 @@ export function CustomerDetailPage() {
               </Button>
             </CardHeader>
             <CardContent>
-              <NotesList notes={notes} isLoading={isNotesLoading} error={notesError} />
+              <NotesList
+                notes={notes}
+                isLoading={isNotesLoading}
+                error={notesError}
+                onAddNote={() => setIsAddNoteOpen(true)}
+              />
             </CardContent>
           </Card>
 

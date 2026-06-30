@@ -1,14 +1,21 @@
-import { useState } from 'react'
-import { Building2, RefreshCw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useEffect, useState } from 'react'
+import { Building2 } from 'lucide-react'
 import { CustomersTable } from '@/components/customers/CustomersTable'
+import { CustomersToolbar } from '@/components/customers/CustomersToolbar'
 import { CustomersPagination } from '@/components/customers/CustomersPagination'
 import { useCustomers } from '@/hooks/useCustomers'
-import { cn } from '@/lib/utils'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 
 export function CustomersPage() {
+  const [searchInput, setSearchInput] = useState('')
+  const debouncedSearch = useDebouncedValue(searchInput, 400)
   const [page, setPage] = useState(1)
-  const { customers, meta, isLoading, error, refetch } = useCustomers(page)
+
+  useEffect(() => {
+    setPage(1)
+  }, [debouncedSearch])
+
+  const { customers, meta, isLoading, error, refetch } = useCustomers(debouncedSearch, page)
 
   return (
     <div className="space-y-6">
@@ -22,13 +29,22 @@ export function CustomersPage() {
             <p className="mt-1 text-sm text-muted-foreground">Customers converted from your leads.</p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={refetch} disabled={isLoading}>
-          <RefreshCw className={cn('size-4', isLoading && 'animate-spin')} />
-          Refresh
-        </Button>
       </div>
 
-      <CustomersTable customers={customers} isLoading={isLoading} error={error} />
+      <CustomersToolbar
+        search={searchInput}
+        onSearchChange={setSearchInput}
+        onRefresh={refetch}
+        isLoading={isLoading}
+      />
+
+      <CustomersTable
+        customers={customers}
+        isLoading={isLoading}
+        error={error}
+        hasActiveFilters={debouncedSearch.trim().length > 0}
+        onClearFilters={() => setSearchInput('')}
+      />
 
       {meta && <CustomersPagination meta={meta} onPageChange={setPage} />}
     </div>

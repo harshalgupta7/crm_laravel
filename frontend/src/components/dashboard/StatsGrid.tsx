@@ -6,10 +6,28 @@ export function StatsGrid() {
   const { stats, isLoading, error } = useDashboardStats()
 
   const cards = [
-    { title: 'Total Leads', value: stats?.total_leads ?? null, icon: Users, tone: 'blue' as const },
-    { title: 'Total Customers', value: stats?.total_customers ?? null, icon: Building2, tone: 'emerald' as const },
-    { title: "Today's Follow-ups", value: stats?.todays_follow_ups ?? null, icon: CalendarCheck, tone: 'amber' as const },
-    { title: 'Overdue Tasks', value: stats?.overdue_tasks ?? null, icon: AlertTriangle, tone: 'rose' as const },
+    { title: 'Total Leads', value: stats?.total_leads ?? null, icon: Users, tone: 'blue' as const, to: '/leads' },
+    {
+      title: 'Total Customers',
+      value: stats?.total_customers ?? null,
+      icon: Building2,
+      tone: 'emerald' as const,
+      to: '/customers',
+    },
+    {
+      title: "Today's Follow-ups",
+      value: stats?.todays_follow_ups ?? null,
+      icon: CalendarCheck,
+      tone: 'amber' as const,
+      to: '/tasks',
+    },
+    {
+      title: 'Overdue Tasks',
+      value: stats?.overdue_tasks ?? null,
+      icon: AlertTriangle,
+      tone: 'rose' as const,
+      to: '/tasks',
+    },
   ]
 
   return (
@@ -23,6 +41,7 @@ export function StatsGrid() {
           isLoading={isLoading}
           error={error}
           tone={card.tone}
+          to={card.to}
         />
       ))}
     </div>

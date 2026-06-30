@@ -12,7 +12,7 @@ interface UseCustomersResult {
   refetch: () => void
 }
 
-export function useCustomers(page: number): UseCustomersResult {
+export function useCustomers(search: string, page: number): UseCustomersResult {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [meta, setMeta] = useState<PaginationMeta | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -24,7 +24,7 @@ export function useCustomers(page: number): UseCustomersResult {
     setIsLoading(true)
     setError(null)
 
-    fetchCustomers({ page })
+    fetchCustomers({ search: search || undefined, page })
       .then(({ data }) => {
         if (!active) return
         setCustomers(data.data)
@@ -40,7 +40,7 @@ export function useCustomers(page: number): UseCustomersResult {
     return () => {
       active = false
     }
-  }, [page, reloadToken])
+  }, [search, page, reloadToken])
 
   const refetch = useCallback(() => setReloadToken((token) => token + 1), [])
 

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { apiClient } from '@/api/client'
+import { apiClient, setAuthFailureCallback } from '@/api/client'
 import type { AuthUser } from '@/types/auth'
 
 interface LoginCredentials {
@@ -34,6 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    // When the token refresh fails the interceptor calls this to clear
+    // auth state, causing ProtectedRoute to redirect to /login.
+    setAuthFailureCallback(() => setUser(null))
     fetchUser()
   }, [])
 

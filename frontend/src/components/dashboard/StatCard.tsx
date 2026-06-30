@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -19,11 +20,12 @@ interface StatCardProps {
   isLoading: boolean
   error: string | null
   tone: StatCardTone
+  to?: string
 }
 
-export function StatCard({ title, value, icon: Icon, isLoading, error, tone }: StatCardProps) {
-  return (
-    <Card className="transition-shadow duration-150 hover:shadow-md">
+export function StatCard({ title, value, icon: Icon, isLoading, error, tone, to }: StatCardProps) {
+  const content = (
+    <Card className={cn('transition-shadow duration-150', to && 'hover:shadow-md')}>
       <CardContent className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1 space-y-2">
           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{title}</p>
@@ -40,5 +42,13 @@ export function StatCard({ title, value, icon: Icon, isLoading, error, tone }: S
         </div>
       </CardContent>
     </Card>
+  )
+
+  if (!to) return content
+
+  return (
+    <Link to={to} className="block rounded-xl focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+      {content}
+    </Link>
   )
 }

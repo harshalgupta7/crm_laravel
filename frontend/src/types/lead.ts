@@ -6,6 +6,12 @@ export interface LeadUserSummary {
   email: string
 }
 
+export interface LeadCustomerSummary {
+  id: number
+  company: string | null
+  contact_name: string | null
+}
+
 export interface Lead {
   id: number
   first_name: string
@@ -17,6 +23,7 @@ export interface Lead {
   source: string | null
   assigned_user: LeadUserSummary | null
   creator: LeadUserSummary | null
+  customer: LeadCustomerSummary | null
   created_at: string | null
   updated_at: string | null
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { MoreHorizontal, Inbox } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { MoreHorizontal, Plus, SearchX, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useAuth } from '@/context/AuthContext'
 import { LEAD_STATUS_BADGE_CLASSES, LEAD_STATUS_LABELS, LEAD_STATUS_ROW_CLASSES } from '@/lib/lead-status'
+import { formatExactTimestamp, formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Lead } from '@/types/lead'
 import { LeadFormDialog } from '@/components/leads/LeadFormDialog'
@@ -22,16 +24,27 @@ import { AssignLeadDialog } from '@/components/leads/AssignLeadDialog'
 import { ChangeLeadStatusDialog } from '@/components/leads/ChangeLeadStatusDialog'
 
 const MANAGE_ROLES = ['admin', 'sales-manager']
-const COLUMN_COUNT = 8
+const COLUMN_COUNT = 10
 
 interface LeadsTableProps {
   leads: Lead[]
   isLoading: boolean
   error: string | null
   onChanged: () => void
+  onCreate?: () => void
+  hasActiveFilters?: boolean
+  onClearFilters?: () => void
 }
 
-export function LeadsTable({ leads, isLoading, error, onChanged }: LeadsTableProps) {
+export function LeadsTable({
+  leads,
+  isLoading,
+  error,
+  onChanged,
+  onCreate,
+  hasActiveFilters,
+  onClearFilters,
+}: LeadsTableProps) {
   const { user } = useAuth()
   const canManage = !!user && MANAGE_ROLES.includes(user.role.slug)
 
@@ -54,6 +67,8 @@ export function LeadsTable({ leads, isLoading, error, onChanged }: LeadsTablePro
               <TableHead>Status</TableHead>
               <TableHead>Assigned User</TableHead>
               <TableHead>Created By</TableHead>
+              <TableHead>Created Date</TableHead>
+              <TableHead>Last Updated</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -76,20 +91,49 @@ export function LeadsTable({ leads, isLoading, error, onChanged }: LeadsTablePro
               </TableRow>
             ) : leads.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={COLUMN_COUNT} className="py-10">
-                  <div className="flex flex-col items-center gap-2 text-center">
-                    <div className="flex size-12 items-center justify-center rounded-full bg-brand/10 text-brand">
-                      <Inbox className="size-5" />
+                <TableCell colSpan={COLUMN_COUNT} className="py-14">
+                  {hasActiveFilters ? (
+                    <div className="flex flex-col items-center gap-3 text-center">
+                      <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                        <SearchX className="size-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-foreground">No results match your filters.</p>
+                      </div>
+                      {onClearFilters && (
+                        <Button size="sm" variant="outline" onClick={onClearFilters}>
+                          Clear filters
+                        </Button>
+                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground">No leads found.</p>
-                  </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-3 text-center">
+                      <div className="flex size-12 items-center justify-center rounded-full bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400">
+                        <Users className="size-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-foreground">No leads yet</p>
+                        <p className="text-sm text-muted-foreground">
+                          Leads you add or import will show up here.
+                        </p>
+                      </div>
+                      {onCreate && (
+                        <Button size="sm" onClick={onCreate}>
+                          <Plus className="size-4" />
+                          New Lead
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </TableCell>
               </TableRow>
             ) : (
               leads.map((lead) => (
                 <TableRow key={lead.id} className={LEAD_STATUS_ROW_CLASSES[lead.status]}>
                   <TableCell className="font-medium text-foreground">
-                    {lead.first_name} {lead.last_name}
+                    <Link to={`/leads/${lead.id}`} className="underline-offset-2 hover:underline">
+                      {lead.first_name} {lead.last_name}
+                    </Link>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{lead.company || '—'}</TableCell>
                   <TableCell className="text-muted-foreground">{lead.email}</TableCell>
@@ -103,6 +147,12 @@ export function LeadsTable({ leads, isLoading, error, onChanged }: LeadsTablePro
                     {lead.assigned_user?.name || 'Unassigned'}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{lead.creator?.name || '—'}</TableCell>
+                  <TableCell className="text-muted-foreground" title={formatExactTimestamp(lead.created_at)}>
+                    {formatRelativeTime(lead.created_at) || '—'}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground" title={formatExactTimestamp(lead.updated_at)}>
+                    {formatRelativeTime(lead.updated_at) || '—'}
+                  </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -112,6 +162,9 @@ export function LeadsTable({ leads, isLoading, error, onChanged }: LeadsTablePro
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link to={`/leads/${lead.id}`}>View Details</Link>
+                        </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => setEditingLead(lead)}>Edit</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => setStatusLead(lead)}>
                           Change Status

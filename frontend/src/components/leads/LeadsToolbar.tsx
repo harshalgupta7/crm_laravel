@@ -1,4 +1,4 @@
-import { Search, RefreshCw, Plus } from 'lucide-react'
+import { Search, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -16,7 +16,6 @@ interface LeadsToolbarProps {
   onStatusChange: (value: string) => void
   onRefresh: () => void
   isLoading: boolean
-  onCreate: () => void
 }
 
 export function LeadsToolbar({
@@ -26,7 +25,6 @@ export function LeadsToolbar({
   onStatusChange,
   onRefresh,
   isLoading,
-  onCreate,
 }: LeadsToolbarProps) {
   return (
     <Card size="sm">
@@ -37,7 +35,7 @@ export function LeadsToolbar({
             <Input
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
-              placeholder="Search leads..."
+              placeholder="Search by name, email or company..."
               className="pl-8"
             />
           </div>
@@ -64,16 +62,10 @@ export function LeadsToolbar({
           </Select>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
-            <RefreshCw className={cn('size-4', isLoading && 'animate-spin')} />
-            Refresh
-          </Button>
-          <Button size="sm" onClick={onCreate}>
-            <Plus className="size-4" />
-            New Lead
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
+          <RefreshCw className={cn('size-4', isLoading && 'animate-spin')} />
+          Refresh
+        </Button>
       </CardContent>
     </Card>
   )

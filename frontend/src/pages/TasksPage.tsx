@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { ListChecks } from 'lucide-react'
+import { ListChecks, Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { TasksToolbar } from '@/components/tasks/TasksToolbar'
 import { TasksTable } from '@/components/tasks/TasksTable'
 import { TasksPagination } from '@/components/tasks/TasksPagination'
@@ -30,14 +31,20 @@ export function TasksPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400">
-          <ListChecks className="size-5" />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400">
+            <ListChecks className="size-5" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Tasks</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Track and manage your follow-up tasks.</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Tasks</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Track and manage your follow-up tasks.</p>
-        </div>
+        <Button onClick={() => setIsCreateOpen(true)}>
+          <Plus className="size-4" />
+          New Task
+        </Button>
       </div>
 
       <TasksToolbar
@@ -51,10 +58,22 @@ export function TasksPage() {
         onOverdueChange={setOverdue}
         onRefresh={refetch}
         isLoading={isLoading}
-        onCreate={() => setIsCreateOpen(true)}
       />
 
-      <TasksTable tasks={tasks} isLoading={isLoading} error={error} onChanged={refetch} />
+      <TasksTable
+        tasks={tasks}
+        isLoading={isLoading}
+        error={error}
+        onChanged={refetch}
+        onCreate={() => setIsCreateOpen(true)}
+        hasActiveFilters={debouncedSearch.trim().length > 0 || status.length > 0 || priority.length > 0 || overdue}
+        onClearFilters={() => {
+          setSearchInput('')
+          setStatus('')
+          setPriority('')
+          setOverdue(false)
+        }}
+      />
 
       {meta && <TasksPagination meta={meta} onPageChange={setPage} />}
 

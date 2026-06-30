@@ -7,6 +7,8 @@ export interface TaskListParams {
   status?: string
   priority?: string
   user_id?: number
+  lead_id?: number
+  customer_id?: number
   overdue?: boolean
   page?: number
   per_page?: number

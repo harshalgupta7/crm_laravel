@@ -20,10 +20,6 @@ interface UseTasksResult {
   refetch: () => void
 }
 
-/**
- * The /api/tasks endpoint does not support a title search filter, so
- * the search term is applied client-side against the current page of results.
- */
 export function useTasks({ search, status, priority, overdue, page }: UseTasksFilters): UseTasksResult {
   const [tasks, setTasks] = useState<Task[]>([])
   const [meta, setMeta] = useState<PaginationMeta | null>(null)
@@ -37,6 +33,7 @@ export function useTasks({ search, status, priority, overdue, page }: UseTasksFi
     setError(null)
 
     fetchTasks({
+      search: search || undefined,
       status: status || undefined,
       priority: priority || undefined,
       overdue: overdue || undefined,
@@ -57,14 +54,9 @@ export function useTasks({ search, status, priority, overdue, page }: UseTasksFi
     return () => {
       active = false
     }
-  }, [status, priority, overdue, page, reloadToken])
+  }, [search, status, priority, overdue, page, reloadToken])
 
   const refetch = useCallback(() => setReloadToken((token) => token + 1), [])
 
-  const normalizedSearch = search.trim().toLowerCase()
-  const filteredTasks = normalizedSearch
-    ? tasks.filter((task) => task.title.toLowerCase().includes(normalizedSearch))
-    : tasks
-
-  return { tasks: filteredTasks, meta, isLoading, error, refetch }
+  return { tasks, meta, isLoading, error, refetch }
 }

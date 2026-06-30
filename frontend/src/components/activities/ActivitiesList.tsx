@@ -1,6 +1,6 @@
 import { Inbox } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatAction, formatRelativeTime, getInitials } from '@/lib/format'
+import { ActivityRow } from '@/components/activities/ActivityRow'
 import type { Activity } from '@/types/activity'
 
 interface ActivitiesListProps {
@@ -36,39 +36,22 @@ export function ActivitiesList({ activities, isLoading, error }: ActivitiesListP
 
   if (activities.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 rounded-xl border border-border py-10 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-xl border border-border py-14 text-center">
         <div className="flex size-12 items-center justify-center rounded-full bg-brand/10 text-brand">
           <Inbox className="size-5" />
         </div>
-        <p className="text-sm text-muted-foreground">No activity found.</p>
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">No activity yet</p>
+          <p className="text-sm text-muted-foreground">Actions across your CRM will be logged here.</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <ul className="divide-y divide-border rounded-xl border border-border">
+    <ul className="divide-y divide-border rounded-xl border border-border px-4">
       {activities.map((activity) => (
-        <li key={activity.id} className="flex items-start justify-between gap-4 p-4">
-          <div className="flex min-w-0 items-start gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-foreground">
-              {getInitials(activity.user?.name)}
-            </div>
-            <div className="min-w-0 space-y-0.5">
-              <p className="text-sm font-medium text-foreground">
-                {activity.user?.name ?? 'System'}{' '}
-                <span className="font-normal text-muted-foreground">
-                  {formatAction(activity.action)}
-                </span>
-              </p>
-              {activity.description && (
-                <p className="text-sm text-muted-foreground">{activity.description}</p>
-              )}
-            </div>
-          </div>
-          <span className="shrink-0 text-xs text-muted-foreground">
-            {formatRelativeTime(activity.created_at)}
-          </span>
-        </li>
+        <ActivityRow key={activity.id} activity={activity} />
       ))}
     </ul>
   )

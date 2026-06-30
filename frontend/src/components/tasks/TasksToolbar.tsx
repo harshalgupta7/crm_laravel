@@ -1,4 +1,4 @@
-import { Search, RefreshCw, Plus } from 'lucide-react'
+import { Search, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -28,7 +28,6 @@ interface TasksToolbarProps {
   onOverdueChange: (value: boolean) => void
   onRefresh: () => void
   isLoading: boolean
-  onCreate: () => void
 }
 
 export function TasksToolbar({
@@ -42,7 +41,6 @@ export function TasksToolbar({
   onOverdueChange,
   onRefresh,
   isLoading,
-  onCreate,
 }: TasksToolbarProps) {
   return (
     <Card size="sm">
@@ -53,7 +51,7 @@ export function TasksToolbar({
             <Input
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
-              placeholder="Search tasks..."
+              placeholder="Search by title..."
               className="pl-8"
             />
           </div>
@@ -106,16 +104,10 @@ export function TasksToolbar({
           </Label>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
-            <RefreshCw className={cn('size-4', isLoading && 'animate-spin')} />
-            Refresh
-          </Button>
-          <Button size="sm" onClick={onCreate}>
-            <Plus className="size-4" />
-            New Task
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
+          <RefreshCw className={cn('size-4', isLoading && 'animate-spin')} />
+          Refresh
+        </Button>
       </CardContent>
     </Card>
   )

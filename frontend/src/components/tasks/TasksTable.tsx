@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { MoreHorizontal, Inbox } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { AlertTriangle, ListChecks, MoreHorizontal, Plus, SearchX } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -18,6 +19,7 @@ import {
   TASK_STATUS_LABELS,
   TASK_STATUS_ROW_CLASSES,
 } from '@/lib/task-status'
+import { formatDueDate, formatExactDate, isOverdueDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Task } from '@/types/task'
 import { TaskFormDialog } from '@/components/tasks/TaskFormDialog'
@@ -30,15 +32,40 @@ interface TasksTableProps {
   isLoading: boolean
   error: string | null
   onChanged: () => void
+  onCreate?: () => void
+  hasActiveFilters?: boolean
+  onClearFilters?: () => void
 }
 
-function relatedToLabel(task: Task): string {
-  if (task.lead) return `${task.lead.first_name} ${task.lead.last_name}`
-  if (task.customer) return task.customer.company || task.customer.contact_name || '—'
-  return '—'
+function RelatedToCell({ task }: { task: Task }) {
+  if (task.lead) {
+    return (
+      <Link to={`/leads/${task.lead.id}`} className="text-foreground underline-offset-2 hover:underline">
+        {task.lead.first_name} {task.lead.last_name}
+      </Link>
+    )
+  }
+
+  if (task.customer) {
+    return (
+      <Link to={`/customers/${task.customer.id}`} className="text-foreground underline-offset-2 hover:underline">
+        {task.customer.company || task.customer.contact_name || 'Customer'}
+      </Link>
+    )
+  }
+
+  return <span className="text-muted-foreground">—</span>
 }
 
-export function TasksTable({ tasks, isLoading, error, onChanged }: TasksTableProps) {
+export function TasksTable({
+  tasks,
+  isLoading,
+  error,
+  onChanged,
+  onCreate,
+  hasActiveFilters,
+  onClearFilters,
+}: TasksTableProps) {
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [deletingTask, setDeletingTask] = useState<Task | null>(null)
 
@@ -76,20 +103,49 @@ export function TasksTable({ tasks, isLoading, error, onChanged }: TasksTablePro
               </TableRow>
             ) : tasks.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={COLUMN_COUNT} className="py-10">
-                  <div className="flex flex-col items-center gap-2 text-center">
-                    <div className="flex size-12 items-center justify-center rounded-full bg-brand/10 text-brand">
-                      <Inbox className="size-5" />
+                <TableCell colSpan={COLUMN_COUNT} className="py-14">
+                  {hasActiveFilters ? (
+                    <div className="flex flex-col items-center gap-3 text-center">
+                      <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                        <SearchX className="size-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-foreground">No results match your filters.</p>
+                      </div>
+                      {onClearFilters && (
+                        <Button size="sm" variant="outline" onClick={onClearFilters}>
+                          Clear filters
+                        </Button>
+                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground">No tasks found.</p>
-                  </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-3 text-center">
+                      <div className="flex size-12 items-center justify-center rounded-full bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400">
+                        <ListChecks className="size-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-foreground">No tasks yet</p>
+                        <p className="text-sm text-muted-foreground">
+                          Follow-up tasks you create will show up here.
+                        </p>
+                      </div>
+                      {onCreate && (
+                        <Button size="sm" onClick={onCreate}>
+                          <Plus className="size-4" />
+                          New Task
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </TableCell>
               </TableRow>
             ) : (
               tasks.map((task) => (
                 <TableRow key={task.id} className={TASK_STATUS_ROW_CLASSES[task.status]}>
                   <TableCell className="font-medium text-foreground">{task.title}</TableCell>
-                  <TableCell className="text-muted-foreground">{relatedToLabel(task)}</TableCell>
+                  <TableCell>
+                    <RelatedToCell task={task} />
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{task.user?.name || 'Unassigned'}</TableCell>
                   <TableCell>
                     <Badge className={cn('font-normal', TASK_PRIORITY_BADGE_CLASSES[task.priority])}>
@@ -101,7 +157,20 @@ export function TasksTable({ tasks, isLoading, error, onChanged }: TasksTablePro
                       {TASK_STATUS_LABELS[task.status]}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{task.due_date || '—'}</TableCell>
+                  <TableCell title={formatExactDate(task.due_date)}>
+                    {task.due_date ? (
+                      isOverdueDate(task.due_date) && task.status !== 'completed' ? (
+                        <span className="inline-flex items-center gap-1 font-medium text-destructive">
+                          <AlertTriangle className="size-3.5" />
+                          {formatDueDate(task.due_date)}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">{formatDueDate(task.due_date)}</span>
+                      )
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
