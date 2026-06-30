@@ -24,7 +24,9 @@ A REST API for managing sales leads, customers, notes, tasks, and team activity 
 16. [Role Matrix](#16-role-matrix)
 17. [Assumptions](#17-assumptions)
 18. [Future Improvements](#18-future-improvements)
-19. [License](#19-license)
+19. [Known Limitations](#19-known-limitations)
+20. [Deployment Notes](#20-deployment-notes)
+21. [License](#21-license)
 
 ---
 
@@ -60,10 +62,13 @@ The API is fully documented with OpenAPI 3.0 (via L5-Swagger) and can be explore
 | Authentication    | JWT via `php-open-source-saver/jwt-auth` |
 | Authorization     | Custom role middleware (`App\Http\Middleware\RoleMiddleware`) |
 | API Documentation | OpenAPI 3.0 via `darkaonline/l5-swagger` (`zircote/swagger-php`, PHP attributes) |
-| Database          | SQLite by default (MySQL/PostgreSQL supported via `.env`) |
+| Database          | SQLite by default (MySQL/PostgreSQL supported via `.env`); a PostgreSQL schema dump is provided at `database/schema.sql` |
 | Testing           | PHPUnit |
 | Code style        | Laravel Pint |
 | Frontend tooling  | Vite + Tailwind CSS (asset pipeline only — this is an API-first project) |
+| Containerization  | Docker (`Dockerfile` — PHP 8.3-CLI image with PostgreSQL extensions) |
+
+> `laravel/sanctum` is present in `composer.json` as part of Laravel's default scaffolding but is **not used** by this project — all API authentication is handled by JWT (see [section 7](#7-jwt-setup)).
 
 ## 4. Architecture Overview
 
@@ -94,7 +99,7 @@ API Resources              → response shaping (App\Http\Resources\*)
 Key architectural decisions:
 
 - **Controllers are thin.** They validate via Form Requests, delegate to a Service class, and shape the response via a Resource. No business rules live in controllers.
-- **Services encapsulate business logic** (`AuthService`, `LeadService`, `CustomerService`, `TaskService`, `DashboardService`), keeping it testable and reusable independent of HTTP.
+- **Services encapsulate business logic** (`AuthService`, `LeadService`, `CustomerService`, `TaskService`, `ActivityService`, `DashboardService`), keeping it testable and reusable independent of HTTP.
 - **Stateless authentication.** JWT tokens carry identity; no server-side session is used for the API.
 - **Role middleware (`role:admin,sales-manager`)** gates routes declaratively at the routing layer, in addition to `auth:api` for authentication.
 - **API Resources** (`LeadResource`, `CustomerResource`, etc.) control exactly what is exposed in JSON responses, including conditionally-loaded relationships via `whenLoaded`.
@@ -143,6 +148,15 @@ php artisan serve
 ```
 
 The API will be available at `http://127.0.0.1:8000/api`, and the interactive documentation at `http://127.0.0.1:8000/api/documentation`.
+
+### Alternative: run with Docker
+
+A `Dockerfile` is provided (PHP 8.3-CLI with PostgreSQL extensions). It builds the app and serves it on port 8000; you still need to provide a `.env` and a database (e.g. a PostgreSQL instance) and run migrations yourself before/after starting the container:
+
+```bash
+docker build -t crm-api .
+docker run --rm -p 8000:8000 --env-file .env crm-api
+```
 
 ## 6. Environment Variables
 
@@ -216,6 +230,14 @@ Seeding runs two seeders, in order:
 
 1. **`RoleSeeder`** — creates the three roles: `admin`, `sales-manager`, `sales-executive`.
 2. **`DemoUserSeeder`** — creates one ready-to-use account per role (see [Demo Accounts](#10-demo-accounts) below).
+
+### Alternative: load the SQL dump directly
+
+A ready-made PostgreSQL schema dump (all tables, indexes, constraints, foreign keys, plus the same seeded roles/demo users) is provided at `database/schema.sql`. This is an alternative to running `migrate --seed` — useful for quickly inspecting the schema or restoring it into a fresh PostgreSQL database:
+
+```bash
+psql "<connection-string>" -f database/schema.sql
+```
 
 ## 9. Running the Project
 
@@ -333,6 +355,19 @@ Documentation source lives in:
 - Each controller — per-endpoint `summary`, `description`, `parameters`, `requestBody`, and `responses`.
 - `app/OpenApi/Schemas/*.php` — reusable response schema definitions (`Lead`, `Customer`, `Note`, `Task`, `Activity`, etc.).
 
+### Postman collection
+
+A ready-to-import Postman collection and environment are provided under `docs/postman/`:
+
+- **Collection:** `docs/postman/CRM_API.postman_collection.json`
+- **Environment:** `docs/postman/CRM_API.postman_environment.json` (defines `base_url` and a `token` variable — populate `token` from the login response, or use the collection's auth tests to set it automatically)
+
+Import both files into Postman, select the `CRM_API` environment, and run the **Auth → Login** request first to obtain a token for the rest of the collection.
+
+### ER diagram
+
+An entity-relationship diagram (Mermaid format) describing all tables and relationships is provided at `docs/ERD.md`. It renders natively on GitHub, or can be viewed in any Mermaid-compatible viewer/editor.
+
 ## 13. API Modules
 
 All routes are prefixed with `/api`. 🔒 indicates a route requires a valid JWT; roles listed are the only roles permitted.
@@ -413,12 +448,16 @@ laravel_project/
 │   ├── OpenApi/
 │   │   └── Schemas/            # Reusable OpenAPI component schemas (Lead, Customer, Task, etc.)
 │   ├── Providers/              # Service container bindings
-│   └── Services/               # Business logic (AuthService, LeadService, CustomerService, TaskService, DashboardService)
+│   └── Services/               # Business logic (AuthService, LeadService, CustomerService, TaskService, ActivityService, DashboardService)
 ├── config/                     # Laravel + jwt-auth + l5-swagger configuration
 ├── database/
 │   ├── factories/              # Model factories used in tests/seeding
 │   ├── migrations/             # Schema definitions for every table
-│   └── seeders/                # RoleSeeder, DemoUserSeeder
+│   ├── seeders/                # RoleSeeder, DemoUserSeeder
+│   └── schema.sql              # PostgreSQL schema dump (alternative to migrate --seed)
+├── docs/
+│   ├── ERD.md                  # Entity-relationship diagram (Mermaid)
+│   └── postman/                # Postman collection + environment
 ├── routes/
 │   ├── api.php                 # All API routes, grouped by auth/role middleware
 │   ├── console.php
@@ -428,6 +467,7 @@ laravel_project/
 │   ├── Feature/
 │   └── Unit/
 ├── .env.example
+├── Dockerfile
 ├── composer.json
 └── README.md
 ```
@@ -492,6 +532,27 @@ laravel_project/
 - Expand automated test coverage (currently limited to the framework's default smoke tests) with feature tests per module and role.
 - Consider OAuth2/social login as an alternative to password-based auth.
 
-## 19. License
+## 19. Known Limitations
+
+- Authorization is role-only — there are no per-record ownership checks, so e.g. any Sales Executive can act on tasks/leads not assigned to them as long as their role permits the action.
+- No soft deletes: deleting a lead or task is permanent (no recovery/undo).
+- The activity log is written by application code at the point an action occurs; it is not a database-level (trigger-based) audit trail, so any change made outside the API layer (e.g. a direct DB edit) won't be recorded.
+- No automated factories/seeders for sample leads, customers, notes, or tasks — only roles and demo users are seeded, so listing/dashboard endpoints will look sparse until data is created manually.
+- Automated test coverage is currently limited to the framework's default smoke tests (`tests/Feature/ExampleTest.php`, `tests/Unit/ExampleTest.php`); no feature tests exist yet per module/role.
+- No API versioning (`/api/v1/...`) — all routes are unversioned under `/api`.
+- Rate limiting is applied only to `register`/`login`; other write endpoints are not throttled.
+- SQLite is the default local datastore; while the schema is written to be portable, it has not been tested end-to-end against MySQL.
+
+## 20. Deployment Notes
+
+This project ships as a plain Laravel API with no environment-specific deployment pipeline configured (no CI/CD, no cloud-provider config). For deploying beyond local development:
+
+- **Docker:** the provided `Dockerfile` builds a self-contained PHP 8.3-CLI image (with PostgreSQL extensions) that serves the app via `php artisan serve` on port 8000. It is suitable for quick container-based testing; for production, front it with a real web server (Nginx + PHP-FPM) rather than the built-in dev server.
+- **Database:** point `DB_CONNECTION`/`DB_HOST`/`DB_PORT`/`DB_DATABASE`/`DB_USERNAME`/`DB_PASSWORD` at a managed PostgreSQL/MySQL instance, then run `php artisan migrate --seed` (or load `database/schema.sql` for PostgreSQL) against it.
+- **Required runtime config:** `APP_KEY` (`php artisan key:generate`) and `JWT_SECRET` (`php artisan jwt:secret`) must be generated per environment — never reuse the values from local `.env`.
+- **Swagger spec:** run `php artisan l5-swagger:generate` as part of the deploy step (or set `L5_SWAGGER_GENERATE_ALWAYS=true` to regenerate on every request — not recommended for production due to the performance cost).
+- No queue worker, scheduler, or background job is required for the current feature set; `QUEUE_CONNECTION=database` is configured but not actively used by any feature.
+
+## 21. License
 
 This project is open-sourced under the [MIT license](https://opensource.org/licenses/MIT).
